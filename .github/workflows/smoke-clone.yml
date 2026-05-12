@@ -1,0 +1,33 @@
+name: Smoke clone
+
+# Weekly: clone the template fresh, install + build to catch
+# "the template is broken" before a student hits it.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 9am UTC
+  workflow_dispatch:
+
+jobs:
+  fresh-clone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone template into a fresh dir
+        run: |
+          mkdir -p /tmp/smoke
+          cd /tmp/smoke
+          git clone --depth 1 https://github.com/${{ github.repository }}.git template
+          cd template
+          ls -la
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install + build
+        working-directory: /tmp/smoke/template
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun lib/bible/test.ts
+          bun run build
