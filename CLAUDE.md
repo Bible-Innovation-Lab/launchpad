@@ -2,123 +2,159 @@
 
 # Build notes for AI assistants
 
-This file is loaded by Claude Code / Cursor / OpenAI Codex when working in this
-repo. It captures the patterns this template uses so the AI can be useful
-without spelunking.
+This repo is the **source for the `@bil/launchpad` npm package**, not a
+student template. Students consume this package from
+[`Bible-Innovation-Lab/bil-app-template`](https://github.com/Bible-Innovation-Lab/bil-app-template).
+Read `README.md` for the consumer-facing view; this file captures the
+patterns + invariants that keep the package healthy.
 
-## What this is
+## What ships from here
 
-Bible Innovation Lab (BIL) Launchpad — a Next.js 16 + TypeScript template for
-shipping daily-interaction Bible mini-products. Forked once per product. Each
-product lives on its own `<app-id>.bibleinnovationlab.org` subdomain.
+`@bil/launchpad` is TypeScript source — consumers transpile via Next.js's
+`transpilePackages`. No build step in this repo; we ship `.ts` directly.
+`withLaunchpad(nextConfig)` (re-exported from `src/config/next.ts`) sets
+`transpilePackages: ["@bil/launchpad"]` so students never touch it.
 
-US-only v1 (proxy enforces). Anonymous analytics by default; sign-in and
-push notifications are opt-in modules at `modules/`.
+Subpath exports (see `package.json` `exports` map):
+
+- `@bil/launchpad/proxy` — `proxy` function + `config` matcher
+- `@bil/launchpad/bible` — `getVerse`, `getRange`, `getDailyVerse` (YouVersion)
+- `@bil/launchpad/analytics/{server,client}` — PostHog forwarder + 1KB beacon
+- `@bil/launchpad/share/{client,server}` — Wordle grid + OG cards
+- `@bil/launchpad/routes/{track,bible,og,health}` — pre-made App Router handlers
+- `@bil/launchpad/config/next` — `withLaunchpad`
+- `@bil/launchpad/examples/*` — copy-paste components (NOT imported; students copy)
+
+`src/modules/{auth,push}/` are copy-paste scaffolds with their own peer-deps.
+They are excluded from typecheck on purpose (see `tsconfig.json` `exclude`).
 
 ## Next.js 16 specifics
 
-**Middleware is now Proxy.** The file is `proxy.ts` and exports a `proxy()`
-function. Same behavior as middleware in older versions, just renamed. Do
-NOT recreate as `middleware.ts`; Next 16 will not pick it up.
+**Middleware is now Proxy.** The file in a student app is `proxy.ts` at the
+project root and exports a `proxy` function. Students do:
 
-**Route handlers** still live at `app/<path>/route.ts` and export per-method
-functions (`POST`, `GET`, etc.). Web `Request`/`Response` semantics; Next
-extends with `NextRequest`/`NextResponse`.
+```ts
+import { proxy } from "@bil/launchpad/proxy";
+export default proxy;
+export const config = { matcher: [...] };
+```
 
-When in doubt, check `node_modules/next/dist/docs/01-app/` for the in-version
-docs before relying on training data.
+Next 16 requires `runtime` and `config` to be **literal exports in the
+route/proxy file** — they cannot be re-exported through a package. Same
+for `proxy as default` (Next 16 wants the literal function). The
+verification commit `9c40b21` (in a throwaway app) confirmed:
+
+- ✅ `import { proxy } from "@bil/launchpad/proxy"; export default proxy;`
+- ❌ `export { proxy as default } from "@bil/launchpad/proxy";`
+- ✅ `export const runtime = "edge";` (literal in route file)
+- ❌ `export { runtime } from "@bil/launchpad/routes/...";`
+
+Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 
 ## File-by-file map
 
-- `app/` — Next.js App Router pages. Default `app/page.tsx` is a placeholder;
-  replace it with your product.
-- `app/api/track/route.ts` — server-side analytics endpoint. Reads `_lp_aid`
-  cookie, enriches with geo + parsed UA, forwards to PostHog. Returns 204.
-- `app/coming-soon/page.tsx` — landing page for non-US traffic.
-- `proxy.ts` — runs on every page request. Bot filter → geo-block →
-  anon-cookie mint → one-shot `first_visit` signal cookie.
-- `lib/bible/` — `@bil/bible`. World English Bible per-book JSON +
-  `getVerse`, `getRange`, `getBook`, `getDailyVerse`, `getRandomVerse`,
-  `searchText`. Throws `BibleRefError` (with `didYouMean`) on miss.
-- `lib/analytics/client.ts` — 1KB `track(event, props?)` beacon. Use in
-  client components.
-- `lib/analytics/server.ts` — PostHog forwarder + UA parser. Server only.
-- `lib/share/client.ts` — Wordle-style grid renderer + native-share helper.
-  Use in client components. NO spoilers in `shareText()` output by design.
-- `lib/share/server.tsx` — `@vercel/og` OG card generator for social
-  scrapers. Aggressively cached (`immutable, max-age=86400`).
-- `modules/auth/` — opt-in NextAuth scaffold. Default OFF; copy files in
-  + set env vars to enable. README inside the folder.
-- `modules/push/` — opt-in Web Push scaffold. Default OFF; same pattern.
-- `examples/` — copy-paste components: `VerseOfDay`, `TrackedButton`,
-  `ShareResult`. These are STARTING POINTS, not packages you import.
-- `scripts/setup.sh` — first-deploy script. Runs once per repo.
-- `scripts/doctor.sh` — environment health check. Run anytime.
-- `scripts/build-bible.ts` — one-time. Re-runnable if you need to re-fetch
-  the WEB Bible JSON.
-- `docs/TROUBLESHOOTING.md` — named errors + fixes.
-- `docs/ANALYTICS.md` — event taxonomy + PostHog dashboard links.
-- `docs/RECIPES.md` — "how do I add X?" recipes.
+- `src/proxy/index.ts` — proxy function + matcher. Bot filter →
+  US-only geo-block → anon-cookie mint → one-shot `_lp_fv` first-visit signal.
+- `src/bible/server.ts` — YouVersion Platform API wrapper. Top-level facade
+  uses module-singleton client; factory `createYouVersionClient` exists for
+  tests. Header is `X-YVP-App-Key`. `bible_id` is hard-coded to `111` (NIV
+  2011). Returns `Passage = { id, reference, content }`.
+- `src/bible/server.test.ts` — 21 unit tests with stubbed `fetch`. Run with
+  `bun src/bible/server.test.ts`.
+- `src/analytics/server.ts` — PostHog forwarder. Hard-gated to
+  `NODE_ENV=production`. Exports `capture`, `parseUA`.
+- `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
+  `/api/v1/track` (versioned path). Fire-and-forget, never throws.
+- `src/share/client.ts` — `renderShareGrid` (canvas), `shareResult` (native
+  share → clipboard fallback), `shareText`. NO spoilers in `shareText`
+  output by design.
+- `src/share/server.tsx` — `@vercel/og` OG card. Aggressively cached.
+- `src/routes/track.ts` — POST handler for `/api/v1/track`. Reads `_lp_aid`,
+  enriches with geo+UA, calls `capture`. Emits `first_visit` before inbound
+  event when `_lp_fv=1` is set.
+- `src/routes/bible.ts` — GET handler for `/api/v1/bible/[ref]`. Returns
+  Passage JSON. Maps `BibleRefError` → 400, `YouVersionError` → 404/502.
+- `src/routes/og.tsx` — generic 1200×630 OG card. Students re-export `GET`
+  from this and add `export const runtime = "edge"` literally.
+- `src/routes/health.ts` — `{ status: "ok", app_id, ts }`.
+- `src/config/next.ts` — `withLaunchpad`. Adds `transpilePackages`, BIL
+  security headers (HSTS, X-Frame-Options, etc.), asserts `APP_ID`,
+  `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production.
+- `src/examples/*` — `VerseOfDay`, `TrackedButton`, `ShareResult`.
+  Copy-paste starting points. NOT importable as a runtime API surface.
+- `src/modules/{auth,push}/` — opt-in scaffolds. Excluded from typecheck;
+  they have their own peer-deps that the student installs.
+- `docs/PRD.md` — platform requirements.
+- `docs/youversion-mapping.md` — API integration brief.
 
 ## Canonical patterns
 
-**Add a new analytics event:**
+**Add a new pre-made route:**
 
-```tsx
-"use client";
-import { track } from "@/lib/analytics/client";
-// in a handler:
-track("event_name", { some_prop: "value" });
-```
+1. Create `src/routes/<name>.ts` exporting `GET` / `POST` etc.
+2. Add `"./routes/<name>": "./src/routes/<name>.ts"` to `package.json`
+   `exports`.
+3. Document in `README.md` table.
+4. Remember: students re-export, so any `runtime`/`config` must be literals
+   in the student's `route.ts`, not in this package.
 
-Event names are snake_case verbs (`puzzle_complete`, `share_clicked`).
-Props are flat key/value; nested objects work but discourage them.
+**Add a new module under bible/share/analytics:**
 
-**Look up a verse server-side:**
+1. New file under `src/<area>/<name>.ts`.
+2. Add subpath export in `package.json`.
+3. Add test next to it (`<name>.test.ts`) — they run with `bun`.
+4. Update `README.md` table.
+5. `bun run smoke` before commit.
 
-```tsx
-import { getVerse } from "@/lib/bible";
-const v = await getVerse("John 3:16");
-console.log(v.text);
-```
+**Touch the proxy:**
 
-`getVerse` returns `Promise<Verse>` and throws `BibleRefError` on miss.
-Aliases work: `"Jn 3:16"`, `"1 Cor 13:4"`, `"Psalm 23:1"`.
+The matcher lives in `src/proxy/index.ts` but students still need a literal
+`config` in their `proxy.ts`. Keep the matcher example in `README.md` in
+sync if you change defaults.
 
-**Render the day's verse:**
+**Versioning + release:**
 
-```tsx
-import { getDailyVerse } from "@/lib/bible";
-const v = await getDailyVerse(new Date());
-```
+Bug fixes + new features land here; students get them via
+`bun update @bil/launchpad`. Breaking changes require coordinating a
+template-repo update too. SemVer applies — `0.x.y` until v1.
 
-Deterministic per UTC date. Same day → same verse globally.
+## Required env vars (in student apps)
 
-**Add a new page:** `app/<route>/page.tsx`. Server components by default;
-add `"use client"` at the top for components that need state or event handlers.
+`withLaunchpad` asserts these at build time in production:
 
-**Style:** Tailwind 4 via `@tailwindcss/postcss`. Prefer utility classes
-over inline styles. Color palette stays neutral (zinc/white) by default;
-products override per their product UX.
+- `APP_ID` — student's subdomain slug (e.g. `bible-trivia`)
+- `POSTHOG_KEY` — shared BIL PostHog project key
+- `YOUVERSION_API_KEY` — shared YouVersion Platform API key (header is
+  `X-YVP-App-Key`)
+
+Optional: `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`).
+
+`bil-provisioning` (separate repo) injects these into the student's Vercel
+project. This package never reads them at import time — only at handler
+invocation or build-time assertion.
 
 ## What NOT to do
 
-- Don't add a client-side analytics SDK. The server-side beacon pattern is
-  the WHOLE POINT. ~1KB instead of ~50KB, ad-blocker proof, no consent
-  banner needed for US-only.
-- Don't bundle additional Bible translations in v1. Use `@bil/bible` (WEB only).
-- Don't add real auth to the default path. Use `modules/auth/` if you need
-  it; copy it in, don't enable globally.
-- Don't disable proxy. Bots will pollute analytics; non-US traffic
-  needs the legal geo-block.
-- Don't add `node:fs` or other Node-only APIs to client components.
-- Don't commit secrets. `.env` is gitignored; provisioning service handles
-  prod env vars.
-- Don't re-create `middleware.ts`. The file is `proxy.ts` in Next 16.
+- Don't add a build step. We ship TypeScript source; `transpilePackages`
+  handles it on the consumer side.
+- Don't introduce a client-side analytics SDK. The server-side beacon at
+  `/api/v1/track` is the whole point (~1KB, ad-blocker proof, no consent
+  banner for US-only).
+- Don't re-export `runtime` or `config` from pre-made route files (Next 16
+  won't accept it; see verification above).
+- Don't bundle Bible JSON. YouVersion Platform API is the source of truth
+  now. (Old `lib/bible/books/` was deleted with the package refactor.)
+- Don't add direct dependencies on Next.js or React — they're peerDeps.
+  Same for `@vercel/og`.
+- Don't import from `@/lib/...`. That alias only existed in the old
+  Next.js template; the package uses bare specifier paths within `src/`.
+- Don't enable `src/modules/**` in typecheck. They have their own peer-deps
+  (e.g. `next-auth`) that aren't installed here.
+- Don't commit secrets. `.env.local` is gitignored.
 
 ## When you're stuck
 
-1. Check `docs/TROUBLESHOOTING.md`.
-2. Run `./scripts/doctor.sh` — health-checks bun, env vars, endpoints.
-3. Look at the trivia game repo (`Bible-Innovation-Lab/bible-trivia`) for a
-   working example of the full pattern.
+1. Read `README.md` for the consumer view + subpath export table.
+2. Look at the bil-app-template repo for how a student wires this in.
+3. Look at `bible-trivia` for a real app consuming the package.
+4. Run `bun run smoke` (typecheck + 21 unit tests).
