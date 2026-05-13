@@ -11,8 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { capture, parseUA } from "../analytics/server.js";
-import type { JSONValue } from "../analytics/client.js";
+import { capture, parseUA } from "../analytics/server";
+import type { JSONValue } from "../analytics/client";
 
 const APP_ID = process.env.APP_ID ?? "unknown";
 const LIB_TAG = "bil-launchpad-server";

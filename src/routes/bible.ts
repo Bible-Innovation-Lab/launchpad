@@ -15,7 +15,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { getVerse, BibleRefError, YouVersionError } from "../bible/server.js";
+import { getVerse, BibleRefError, YouVersionError } from "../bible/server";
 
 interface Ctx {
   params: Promise<{ ref: string }>;
