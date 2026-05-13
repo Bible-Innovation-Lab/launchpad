@@ -88,9 +88,17 @@ Set up:
 2. Create a saved insight: Retention by `app_id`.
 3. Pin to a Program Dashboard with traffic + D2 retention for all 50 products.
 
-Local dev: leave `POSTHOG_KEY` unset. Events log to the terminal:
+Local dev never sends to PostHog — by design. Events log to the terminal:
 ```
-[bil-analytics] (no POSTHOG_KEY) puzzle_complete { app_id: "bible-trivia", ... }
+[bil-analytics] (dev) puzzle_complete { app_id: "bible-trivia", ... }
 ```
-That tells you the beacon fires. Add `POSTHOG_KEY` in `.env.local` to
-actually send to PostHog.
+This is intentional. Developer test events would pollute the central
+dashboard: inflated DAU, contaminated cohorts, biased A/B results. Real
+user traffic only.
+
+Production deploys (`NODE_ENV=production` on Vercel) send to PostHog using
+the `POSTHOG_KEY` that bil-provisioning injects when you ran `setup.sh`.
+There's nothing to configure locally — the gate is automatic.
+
+If you need to test the full PostHog wire path against a real instance,
+deploy a preview build and trigger the event from the live URL.

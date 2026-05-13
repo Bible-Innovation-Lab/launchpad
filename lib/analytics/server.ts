@@ -1,9 +1,16 @@
 /**
  * @bil/analytics — server-side PostHog forwarder.
  *
- * Used by app/api/track/route.ts. Falls back to console logging when
- * POSTHOG_KEY is unset (local dev). Failures never bubble up; analytics
- * never break user-facing flows.
+ * Production-only. Local dev (`bun run dev`) NEVER sends to PostHog —
+ * events log to the terminal instead. This keeps the central PostHog
+ * dashboard free of developer noise (test events, cohort pollution,
+ * inflated DAU). Real user traffic only.
+ *
+ * The POSTHOG_KEY env var is injected into Vercel's production +
+ * preview environments by bil-provisioning. Vercel sets NODE_ENV to
+ * "production" for both, which is what gates the forwarder.
+ *
+ * Failures never bubble up; analytics never break user-facing flows.
  */
 
 import { PostHog } from "posthog-node";
@@ -13,9 +20,19 @@ let client: PostHog | null = null;
 
 function getClient(): PostHog | null {
   if (client) return client;
+  // Gate 1: production deployments only.
+  if (process.env.NODE_ENV !== "production") return null;
+  // Gate 2: key must be present. Should be — bil-provisioning sets it on
+  // every Vercel project. If missing in prod, log loudly so platform team
+  // sees it in Vercel function logs.
   const key = process.env.POSTHOG_KEY;
+  if (!key) {
+    console.warn(
+      "[bil-analytics] POSTHOG_KEY missing in production — events will not fire",
+    );
+    return null;
+  }
   const host = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
-  if (!key) return null;
   client = new PostHog(key, { host, flushAt: 1, flushInterval: 1000 });
   return client;
 }
@@ -30,10 +47,10 @@ export type CaptureInput = {
 export async function capture(input: CaptureInput): Promise<void> {
   const ph = getClient();
   if (!ph) {
-    // Dev fallback. Visible in `bun run dev` output so students can
-    // verify their events fire without hooking PostHog up first.
+    // Dev: print event to terminal so students can verify their tracking
+    // code fires. Never reaches PostHog from local dev — by design.
     if (process.env.NODE_ENV !== "production") {
-      console.log("[bil-analytics] (no POSTHOG_KEY)", input.event, input.properties ?? {});
+      console.log("[bil-analytics] (dev)", input.event, input.properties ?? {});
     }
     return;
   }

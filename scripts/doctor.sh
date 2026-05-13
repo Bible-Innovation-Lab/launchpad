@@ -62,21 +62,19 @@ else
   fail "node_modules missing (run: bun install)"
 fi
 
-# Env vars (non-blocking; analytics work without them in dev)
+# Env vars (non-blocking)
 echo ""
 echo "Env vars (.env.local):"
 if [ -f .env.local ]; then
   pass ".env.local exists"
-  if grep -q "^POSTHOG_KEY=" .env.local 2>/dev/null; then
-    pass "POSTHOG_KEY set"
-  else
-    warn "POSTHOG_KEY not set (analytics will log to terminal instead of PostHog)"
-  fi
   if grep -q "^APP_ID=" .env.local 2>/dev/null; then
     pass "APP_ID set"
   else
     warn "APP_ID not set (defaults to 'unknown')"
   fi
+  # Analytics intentionally not checked here. Local dev never sends to
+  # PostHog — events log to the terminal regardless of POSTHOG_KEY state.
+  # In production, bil-provisioning injects POSTHOG_KEY into Vercel.
 else
   warn ".env.local doesn't exist (copy .env.example to .env.local)"
 fi

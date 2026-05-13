@@ -28,21 +28,25 @@ redirects you to `/coming-soon`. To test locally, either:
 - Set `NEXT_PUBLIC_DISABLE_GEO=1` in `.env.local` to skip the geo-block
   in dev only.
 
-## `POSTHOG_KEY` is undefined / analytics don't appear in PostHog
+## Why don't I see my local dev events in PostHog?
 
-You'll see this in dev console: `[bil-analytics] (no POSTHOG_KEY) event_name {...}`.
-That means the beacon is firing but PostHog isn't configured. To wire it up:
+By design. Local dev never sends to PostHog — events log to the terminal
+instead:
+```
+[bil-analytics] (dev) event_name { app_id: "...", ... }
+```
+This keeps the BIL central dashboard free of developer test events
+(inflated DAU, contaminated cohorts, biased A/B results). Only production
+deployments (`NODE_ENV=production` on Vercel) actually fire to PostHog.
 
-1. Go to your PostHog project → Settings → Project API Keys.
-2. Copy the project API key (starts with `phc_`).
-3. Add to `.env.local`:
-   ```
-   POSTHOG_KEY=phc_yourkeyhere
-   POSTHOG_HOST=https://us.i.posthog.com
-   ```
-4. Restart `bun run dev`.
+To verify the full PostHog wire path: deploy a preview build via
+`git push` and trigger the event from the preview URL.
 
-In production, env vars are injected by the provisioning service.
+If a production deploy isn't appearing in PostHog either:
+- Check the Vercel function logs for `POSTHOG_KEY missing in production` —
+  bil-provisioning should have injected it.
+- PostHog Live Events tab: paste your project's live URL.
+- Wait ~30 seconds; PostHog ingestion isn't instant.
 
 ## `BibleRefError: Invalid Bible reference`
 
@@ -124,11 +128,6 @@ exported functions instead.
 
 ## I can't tell if my events are reaching PostHog
 
-In `bun run dev`, every `track()` call logs to the terminal:
-```
-[bil-analytics] event_name { app_id: "...", browser: "...", ... }
-```
-If you see that, the beacon works. If PostHog dashboard is empty:
-- Confirm `POSTHOG_KEY` is set in `.env.local`.
-- PostHog Live Events tab: paste your project's Live URL.
-- Wait ~30 seconds; PostHog ingestion isn't instant.
+See the "Why don't I see my local dev events in PostHog?" entry above.
+Short version: local dev never sends to PostHog by design. To test the
+real wire, deploy a preview and trigger from the preview URL.
