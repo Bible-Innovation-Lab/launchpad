@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "setup": "./scripts/setup.sh",
     "doctor": "./scripts/doctor.sh",
-    "smoke": "bun lib/bible/test.ts && bun run typecheck && next build",
+    "smoke": "bun lib/bible/test.ts && bun lib/bible/youversion.test.ts && bun run typecheck && next build",
     "build-bible": "bun scripts/build-bible.ts"
   },
   "dependencies": {
