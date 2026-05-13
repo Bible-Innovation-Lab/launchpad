@@ -44,15 +44,18 @@ else
   fail "git not installed"
 fi
 
-# gh CLI
-if command -v gh >/dev/null 2>&1; then
-  if gh auth status >/dev/null 2>&1; then
-    pass "gh authenticated"
-  else
-    warn "gh CLI installed but not authenticated (run: gh auth login)"
-  fi
+# jq (used by setup.sh to parse GitHub device-flow responses + provisioning responses)
+if command -v jq >/dev/null 2>&1; then
+  pass "jq $(jq --version)"
 else
-  warn "gh CLI not installed (needed for setup.sh; brew install gh)"
+  fail "jq not installed (needed for setup.sh; brew install jq)"
+fi
+
+# curl (used by setup.sh's GitHub OAuth device flow + provisioning call)
+if command -v curl >/dev/null 2>&1; then
+  pass "curl $(curl --version | head -1 | awk '{print $2}')"
+else
+  fail "curl not installed (pre-installed on macOS; on Linux: apt install curl)"
 fi
 
 # Node modules

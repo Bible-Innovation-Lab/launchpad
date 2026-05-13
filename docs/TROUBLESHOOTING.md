@@ -71,7 +71,8 @@ try {
 
 The provisioning service rejected your call. Causes:
 - Not a member of the `Bible-Innovation-Lab` GitHub org. Ask the program admin to add you.
-- Your GitHub auth token expired. Run `gh auth refresh`.
+- You authorized the wrong GitHub account in the device-flow browser step.
+  Re-run `./scripts/setup.sh` and authorize with your BIL-org account.
 - Your repo isn't owned by the BIL org. Re-fork from the template under the org.
 
 ## `APPID_TAKEN`
