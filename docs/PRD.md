@@ -118,18 +118,12 @@ The launchpad ships `@bil/share`:
 - `shareText()` helper that produces **spoiler-free** share strings (only the
   score pattern; never the quote or answer).
 
-### F6: US-only enforcement
-
-`proxy.ts` geo-blocks non-US traffic with a 307 redirect to `/coming-soon` BEFORE
-any cookie is minted or any analytics event fires. This is what makes the launchpad
-compliant with GDPR/ePrivacy in v1 without a consent banner.
-
-### F7: Bot filtering
+### F6: Bot filtering
 
 `proxy.ts` filters known bot user-agents (Googlebot, Slackbot, scanners) and skips
 cookie mint + analytics for them. Keeps day-2 retention numbers clean.
 
-### F8: Opt-in modules
+### F7: Opt-in modules
 
 Two opt-in modules ship in `modules/`, default OFF:
 - `modules/auth/` — Sign-in with Apple + Google via NextAuth v5. Solves the iOS
@@ -140,7 +134,7 @@ Two opt-in modules ship in `modules/`, default OFF:
 Each module has its own README with 4-5 step enable instructions. Students copy
 files into their app to turn them on.
 
-### F9: DX surface
+### F8: DX surface
 
 The launchpad ships docs and code structure that minimize the questions students
 hit at hour 1 / day 1 / week 1:
@@ -151,7 +145,7 @@ hit at hour 1 / day 1 / week 1:
 - `examples/` (copy-paste components: `VerseOfDay`, `TrackedButton`, `ShareResult`)
 - `scripts/doctor.sh` (health check; run when something feels off)
 
-### F10: CI
+### F9: CI
 
 - Every PR runs `lint`, `typecheck`, `bible-smoke-test`, and `build`.
 - A weekly smoke-clone job clones the template into a fresh dir and runs `bun install
@@ -168,9 +162,7 @@ hit at hour 1 / day 1 / week 1:
 
 ### NF2: Privacy
 
-- US-only at the edge. No EU traffic touches the cookie code path.
 - Anonymous httpOnly cookie. No fingerprinting.
-- See [`PRIVACY-BRIEF.md`](PRIVACY-BRIEF.md) for the legal review brief.
 
 ### NF3: Security
 
@@ -213,7 +205,6 @@ hit at hour 1 / day 1 / week 1:
 | Paid Vercel Pro team account under BIL billing | Scott | Pending |
 | New BIL-owned PostHog org with project + admin tokens | Scott | Pending |
 | `bil-provisioning` service deployed | Platform team | Not started |
-| Legal sign-off on US-only anon-cookie analytics | YouVersion legal | Pending — see [`PRIVACY-BRIEF.md`](PRIVACY-BRIEF.md) |
 
 ## Risks
 
@@ -235,5 +226,4 @@ hit at hour 1 / day 1 / week 1:
 
 - Full design doc (with autoplan review history, threat model, test plan):
   `~/.gstack/projects/scottbouma/scottbouma-launchpad-design-20260511-152914.md`
-- Privacy / legal brief: [`PRIVACY-BRIEF.md`](PRIVACY-BRIEF.md)
 - Provisioning service requirements: `Bible-Innovation-Lab/bil-provisioning/docs/PRD.md`

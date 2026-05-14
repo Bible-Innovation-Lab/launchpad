@@ -54,7 +54,7 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 ## File-by-file map
 
 - `src/proxy/index.ts` — proxy function + matcher. Bot filter →
-  US-only geo-block → anon-cookie mint → one-shot `_lp_fv` first-visit signal.
+  anon-cookie mint → one-shot `_lp_fv` first-visit signal.
 - `src/bible/server.ts` — YouVersion Platform API wrapper. Top-level facade
   uses module-singleton client; factory `createYouVersionClient` exists for
   tests. Header is `X-YVP-App-Key`. `bible_id` is hard-coded to `111` (NIV
@@ -138,8 +138,7 @@ invocation or build-time assertion.
 - Don't add a build step. We ship TypeScript source; `transpilePackages`
   handles it on the consumer side.
 - Don't introduce a client-side analytics SDK. The server-side beacon at
-  `/api/v1/track` is the whole point (~1KB, ad-blocker proof, no consent
-  banner for US-only).
+  `/api/v1/track` is the whole point (~1KB, ad-blocker proof).
 - Don't re-export `runtime` or `config` from pre-made route files (Next 16
   won't accept it; see verification above).
 - Don't bundle Bible JSON. YouVersion Platform API is the source of truth

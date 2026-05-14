@@ -18,7 +18,7 @@ Internal program. Not open source.
 
 | Sub-path | What it is |
 |---|---|
-| `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): bot filter, US-only geo-block, anon-cookie mint, one-shot first-visit signal. Exports `proxy` function + `config` matcher. |
+| `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): bot filter, anon-cookie mint, one-shot first-visit signal. Exports `proxy` function + `config` matcher. |
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
 | `@bil/launchpad/analytics/server` | PostHog forwarder. Production-only (hard-gated to `NODE_ENV=production`). Exports `capture`, `parseUA`. |
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/v1/track`. |
@@ -43,7 +43,7 @@ Their `proxy.ts` is two lines:
 ```ts
 import { proxy } from "@bil/launchpad/proxy";
 export default proxy;
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|coming-soon|.*\\.[a-zA-Z]+$).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.[a-zA-Z]+$).*)"] };
 ```
 
 (Note: Next.js 16 requires `runtime` and `config` literal-export in the route file — they can't be re-exported from a package. See the autoplan verification commit for context.)
