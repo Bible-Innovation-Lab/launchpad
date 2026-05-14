@@ -22,6 +22,7 @@ Internal program. Not open source.
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
 | `@bil/launchpad/analytics/server` | PostHog forwarder. Production-only (hard-gated to `NODE_ENV=production`). Exports `capture`, `parseUA`. |
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/v1/track`. |
+| `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `page_view` on mount + every client-side route change. |
 | `@bil/launchpad/share/client` | Canvas Wordle-grid generator + `navigator.share` helper. |
 | `@bil/launchpad/share/server` | `@vercel/og` server-rendered cards for social scrapers. |
 | `@bil/launchpad/routes/{track,bible,og,health}` | Pre-made App Router handlers students re-export from `app/api/v1/*/route.ts`. |

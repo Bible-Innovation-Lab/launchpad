@@ -12,6 +12,7 @@
     "./bible": "./src/bible/server.ts",
     "./analytics/server": "./src/analytics/server.ts",
     "./analytics/client": "./src/analytics/client.ts",
+    "./analytics/page-view-tracker": "./src/analytics/page-view-tracker.tsx",
     "./share/client": "./src/share/client.ts",
     "./share/server": "./src/share/server.tsx",
     "./examples/*": "./src/examples/*",

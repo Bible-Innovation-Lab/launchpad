@@ -19,7 +19,7 @@ Subpath exports (see `package.json` `exports` map):
 
 - `@bil/launchpad/proxy` — `proxy` function + `config` matcher
 - `@bil/launchpad/bible` — `getVerse`, `getRange`, `getDailyVerse` (YouVersion)
-- `@bil/launchpad/analytics/{server,client}` — PostHog forwarder + 1KB beacon
+- `@bil/launchpad/analytics/{server,client,page-view-tracker}` — PostHog forwarder + 1KB beacon + auto-page-view layout component
 - `@bil/launchpad/share/{client,server}` — Wordle grid + OG cards
 - `@bil/launchpad/routes/{track,bible,og,health}` — pre-made App Router handlers
 - `@bil/launchpad/config/next` — `withLaunchpad`
@@ -65,6 +65,11 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
   `NODE_ENV=production`. Exports `capture`, `parseUA`.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
   `/api/v1/track` (versioned path). Fire-and-forget, never throws.
+- `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
+  component. Students render it once in `app/layout.tsx`; fires
+  `page_view` with `{ path }` on mount + every client-side route change.
+  Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
+  both `first_visit` + `page_view` with zero student wiring.
 - `src/share/client.ts` — `renderShareGrid` (canvas), `shareResult` (native
   share → clipboard fallback), `shareText`. NO spoilers in `shareText`
   output by design.
