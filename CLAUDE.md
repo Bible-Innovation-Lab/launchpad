@@ -15,18 +15,32 @@ patterns + invariants that keep the package healthy.
 `withLaunchpad(nextConfig)` (re-exported from `src/config/next.ts`) sets
 `transpilePackages: ["@bil/launchpad"]` so students never touch it.
 
+Scope is intentionally narrow: three jobs and nothing else.
+
+1. **Quick spinup** — `proxy` + `config/next` give a student a configured
+   Next 16 app with anon-cookie + security headers + env assertions in
+   ~three one-liners.
+2. **Bible text** — `bible` is a YouVersion Platform API wrapper.
+3. **Auto-tracked analytics** — `proxy` mints the anon cookie, the
+   `page-view-tracker` client component auto-fires `$pageview` on every
+   route change, `routes/track` is the server endpoint that forwards to
+   PostHog. Zero student wiring for first-visit + page-view events.
+
+Everything else (share helpers, OG cards, auth, push, health endpoints,
+client-callable Bible HTTP route) is out of scope and lives in the
+consuming app.
+
 Subpath exports (see `package.json` `exports` map):
 
 - `@bil/launchpad/proxy` — `proxy` function + `config` matcher
 - `@bil/launchpad/bible` — `getVerse`, `getRange`, `getDailyVerse` (YouVersion)
-- `@bil/launchpad/analytics/{server,client,page-view-tracker}` — PostHog forwarder + 1KB beacon + auto-page-view layout component
-- `@bil/launchpad/share/{client,server}` — Wordle grid + OG cards
-- `@bil/launchpad/routes/{track,bible,og,health}` — pre-made App Router handlers
+- `@bil/launchpad/analytics/{server,client,page-view-tracker}` — PostHog forwarder + 1KB beacon + auto-page-view client component
+- `@bil/launchpad/routes/track` — pre-made App Router handler for `/api/v1/track`
 - `@bil/launchpad/config/next` — `withLaunchpad`
-- `@bil/launchpad/examples/*` — copy-paste components (NOT imported; students copy)
 
-`src/modules/{auth,push}/` are copy-paste scaffolds with their own peer-deps.
-They are excluded from typecheck on purpose (see `tsconfig.json` `exclude`).
+Live demos of these APIs live in `bil-app-template/app/examples/*`. The
+package itself ships no copy-paste components — examples are a template
+concern (they're product code students touch, not platform code).
 
 ## Next.js 16 specifics
 
@@ -67,29 +81,18 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
   `/api/v1/track` (versioned path). Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
   component. Students render it once in `app/layout.tsx`; fires
-  `page_view` with `{ path }` on mount + every client-side route change.
+  `$pageview` with `{ path }` on mount + every client-side route change.
   Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
-  both `first_visit` + `page_view` with zero student wiring.
-- `src/share/client.ts` — `renderShareGrid` (canvas), `shareResult` (native
-  share → clipboard fallback), `shareText`. NO spoilers in `shareText`
-  output by design.
-- `src/share/server.tsx` — `@vercel/og` OG card. Aggressively cached.
+  both `first_visit` + `$pageview` with zero student wiring.
 - `src/routes/track.ts` — POST handler for `/api/v1/track`. Reads `_lp_aid`,
   enriches with geo+UA, calls `capture`. Emits `first_visit` before inbound
-  event when `_lp_fv=1` is set.
-- `src/routes/bible.ts` — GET handler for `/api/v1/bible/[ref]`. Returns
-  Passage JSON. Maps `BibleRefError` → 400, `YouVersionError` → 404/502.
-- `src/routes/og.tsx` — generic 1200×630 OG card. Students re-export `GET`
-  from this and add `export const runtime = "edge"` literally.
-- `src/routes/health.ts` — `{ status: "ok", app_id, ts }`.
+  event when `_lp_fv=1` is set. The only pre-made route in the package.
 - `src/config/next.ts` — `withLaunchpad`. Adds `transpilePackages`, BIL
   security headers (HSTS, X-Frame-Options, etc.), asserts `APP_ID`,
   `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production.
-- `src/examples/*` — `VerseOfDay`, `TrackedButton`, `ShareResult`.
-  Copy-paste starting points. NOT importable as a runtime API surface.
-- `src/modules/{auth,push}/` — opt-in scaffolds. Excluded from typecheck;
-  they have their own peer-deps that the student installs.
 - `docs/PRD.md` — platform requirements.
+- `docs/ROADMAP.md` — scoped-out ideas (share helpers, auth, push) with
+  re-add signals. Read this before suggesting we add anything back.
 - `docs/youversion-mapping.md` — API integration brief.
 
 ## Canonical patterns
@@ -103,13 +106,16 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 4. Remember: students re-export, so any `runtime`/`config` must be literals
    in the student's `route.ts`, not in this package.
 
-**Add a new module under bible/share/analytics:**
+**Add a new module under bible/analytics:**
 
 1. New file under `src/<area>/<name>.ts`.
 2. Add subpath export in `package.json`.
 3. Add test next to it (`<name>.test.ts`) — they run with `bun`.
 4. Update `README.md` table.
 5. `bun run smoke` before commit.
+
+Before adding anything to a new area: does it serve one of the three jobs
+(spinup / Bible / auto-analytics)? If not, it belongs in the consuming app.
 
 **Touch the proxy:**
 
@@ -149,11 +155,11 @@ invocation or build-time assertion.
 - Don't bundle Bible JSON. YouVersion Platform API is the source of truth
   now. (Old `lib/bible/books/` was deleted with the package refactor.)
 - Don't add direct dependencies on Next.js or React — they're peerDeps.
-  Same for `@vercel/og`.
 - Don't import from `@/lib/...`. That alias only existed in the old
   Next.js template; the package uses bare specifier paths within `src/`.
-- Don't enable `src/modules/**` in typecheck. They have their own peer-deps
-  (e.g. `next-auth`) that aren't installed here.
+- Don't add scope creep. The package does three things — quick spinup,
+  Bible, auto-analytics. Share cards, OG images, auth, push, health
+  endpoints, etc. live in the consuming app.
 - Don't commit secrets. `.env.local` is gitignored.
 
 ## When you're stuck

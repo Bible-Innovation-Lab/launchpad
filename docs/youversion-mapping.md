@@ -13,9 +13,11 @@ Generated 2026-05-13 as the design doc's primary assignment.
 - **Auth (server → YouVersion):** `X-YVP-App-Key: <key>` header.
   Confirmed via probe 2026-05-13. Server-side shared key. `YOUVERSION_API_KEY`
   env var in each student's Vercel project, injected by bil-provisioning.
-- **Auth (client → student's own API):** none. `/api/v1/bible/...` is open
-  by design, same as today's `/api/track` flow. Bible text is publicly
-  available; YouVersion has no rate limits; there's nothing to gate.
+- **Auth (client → student's own API):** none. If an app builds its own
+  HTTP wrapper around `getVerse` (e.g. for a client-side reader), it can
+  leave the endpoint open — same posture as `/api/v1/track`. Bible text
+  is publicly available; YouVersion has no rate limits; there's nothing
+  to gate.
 - **Rate limits:** none enforced; YV Platform can scale.
 - **Pricing:** free.
 - **Response shape:** `{ id, content, reference }` — plain text content
@@ -84,8 +86,9 @@ accepts requests from any origin, with no header check. Justification:
 
 - `/api/v1/track` is write-only; abuse adds noise to PostHog event counts
   (filterable by `app_id`) but cannot exfiltrate data.
-- `/api/v1/bible/...` returns publicly-available Bible text. There's a
-  hundred ways to get Bible text on the internet without going through us.
+- Any app-built `/api/.../bible/...` endpoint returns publicly-available
+  Bible text. There's a hundred ways to get Bible text on the internet
+  without going through us.
 - YouVersion has no rate limits and explicitly OK'd viral apps. There's no
   cost to BIL from anonymous load.
 

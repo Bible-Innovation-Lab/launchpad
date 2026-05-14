@@ -110,31 +110,12 @@ The launchpad ships `@bil/analytics`:
 Day-2 retention by `app_id` falls out of the standard PostHog Retention insight.
 No custom SQL required.
 
-### F5: Sharing primitives
-
-The launchpad ships `@bil/share`:
-- Client-canvas Wordle-grid PNG generator (per-user share images; free, on-device).
-- Server-rendered OG cards via `@vercel/og` (for Twitter/Facebook scrapers).
-- `shareText()` helper that produces **spoiler-free** share strings (only the
-  score pattern; never the quote or answer).
-
-### F6: Bot filtering
+### F5: Bot filtering
 
 `proxy.ts` filters known bot user-agents (Googlebot, Slackbot, scanners) and skips
 cookie mint + analytics for them. Keeps day-2 retention numbers clean.
 
-### F7: Opt-in modules
-
-Two opt-in modules ship in `modules/`, default OFF:
-- `modules/auth/` — Sign-in with Apple + Google via NextAuth v5. Solves the iOS
-  Safari ITP cookie-wipe problem for streak products.
-- `modules/push/` — Web Push (VAPID + service worker + send endpoint). Solves
-  daily-loop retention amplification once a product already has organic D2 pull.
-
-Each module has its own README with 4-5 step enable instructions. Students copy
-files into their app to turn them on.
-
-### F8: DX surface
+### F6: DX surface
 
 The launchpad ships docs and code structure that minimize the questions students
 hit at hour 1 / day 1 / week 1:
@@ -142,10 +123,11 @@ hit at hour 1 / day 1 / week 1:
 - `docs/TROUBLESHOOTING.md` (named errors: `PROVISIONING_403`, `APPID_TAKEN`, etc.)
 - `docs/ANALYTICS.md` (event taxonomy + PostHog setup)
 - `docs/RECIPES.md` ("how do I add X?")
-- `examples/` (copy-paste components: `VerseOfDay`, `TrackedButton`, `ShareResult`)
+- Live `/examples/*` pages ship in `bil-app-template` — students see the
+  APIs running on their own deployed subdomain and copy from the source.
 - `scripts/doctor.sh` (health check; run when something feels off)
 
-### F9: CI
+### F7: CI
 
 - Every PR runs `lint`, `typecheck`, `bible-smoke-test`, and `build`.
 - A weekly smoke-clone job clones the template into a fresh dir and runs `bun install
@@ -213,7 +195,7 @@ hit at hour 1 / day 1 / week 1:
 | Provisioning service not built before students arrive | Medium | Platform team manually provisions for the first batch (~5 min/repo) until service is up |
 | Vercel free-tier limits hit on a viral product | Medium | Pro team on central billing absorbs surges |
 | PostHog event budget exceeded mid-summer | Medium | Billing alert at 800 K events; auto-upgrade to Growth tier before cap |
-| Day-2 retention math under-counts due to Safari ITP | High | Documented limitation; opt-in auth module addresses for streak products |
+| Day-2 retention math under-counts due to Safari ITP | High | Documented limitation; apps that need streak persistence add their own auth |
 | `@bil/bible` bundle pollutes products that don't use it | Low | Per-book lazy load: only referenced books parse on cold start |
 
 ## Open questions

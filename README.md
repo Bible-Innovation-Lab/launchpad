@@ -1,9 +1,10 @@
 # @bil/launchpad
 
-The BIL platform shipped as a single npm package. Pre-made route handlers,
-Bible reader (YouVersion-backed), analytics, share helpers, OG card gen,
-and security proxy — all the code that's the same across every student
-product in the BIL summer program.
+The BIL platform shipped as a single npm package. Three things, intentionally
+narrow: a security proxy (anon-cookie mint + bot filter), a YouVersion-backed
+Bible reader, and auto-page-view analytics — the code that's the same across
+every student product in the BIL summer program. Apps own everything else
+(share cards, share text, OG images, auth, push, etc.).
 
 **This repo is the package source, not a student template.** Students
 fork [`Bible-Innovation-Lab/bil-app-template`](https://github.com/Bible-Innovation-Lab/bil-app-template)
@@ -22,14 +23,12 @@ Internal program. Not open source.
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
 | `@bil/launchpad/analytics/server` | PostHog forwarder. Production-only (hard-gated to `NODE_ENV=production`). Exports `capture`, `parseUA`. |
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/v1/track`. |
-| `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `page_view` on mount + every client-side route change. |
-| `@bil/launchpad/share/client` | Canvas Wordle-grid generator + `navigator.share` helper. |
-| `@bil/launchpad/share/server` | `@vercel/og` server-rendered cards for social scrapers. |
-| `@bil/launchpad/routes/{track,bible,og,health}` | Pre-made App Router handlers students re-export from `app/api/v1/*/route.ts`. |
+| `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
+| `@bil/launchpad/routes/track` | Pre-made `POST /api/v1/track` handler. Students re-export from `app/api/v1/track/route.ts`. Reads `_lp_aid`, enriches with geo + UA, emits `first_visit` once when the cookie is freshly minted. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
-| `@bil/launchpad/examples/*` | Copy-paste components (`VerseOfDay`, `TrackedButton`, `ShareResult`). Not imported — students copy them into their own `app/`. |
 
-Opt-in modules under `src/modules/` (auth, push) are copy-paste scaffolds students drop into their app when they need them. They have their own peer-deps (e.g. `next-auth`) the student installs.
+Live demos of these APIs ship in `bil-app-template/app/examples/*` —
+students see them running on their own deployed subdomain.
 
 ## How a student consumes this
 
@@ -90,13 +89,12 @@ src/
 ├── bible/server.ts                   YouVersion wrapper
 ├── bible/server.test.ts              21 unit tests
 ├── analytics/{client,server}.ts      beacon + forwarder
-├── share/{client.ts, server.tsx}     grid + OG card
-├── modules/{auth,push}/              opt-in copy-paste scaffolds
-├── examples/                         copy-paste components
-├── routes/{track,bible,og,health}    pre-made App Router handlers
+├── analytics/page-view-tracker.tsx   auto-page-view client component
+├── routes/track.ts                   pre-made App Router handler
 └── config/next.ts                    withLaunchpad
 docs/
 ├── PRD.md                            platform requirements
+├── ROADMAP.md                        scoped-out ideas (share, auth, push)
 └── youversion-mapping.md             API integration brief
 ```
 
