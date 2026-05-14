@@ -1,8 +1,8 @@
 /**
- * POST /api/v1/track — analytics endpoint.
+ * POST /api/track — analytics endpoint.
  *
  * Pre-made App Router handler. Student template re-exports `POST` from
- * `app/api/v1/track/route.ts` so logic propagates via `bun update`.
+ * `app/api/track/route.ts` so logic propagates via `bun update`.
  *
  * Always returns 204 (analytics never break the app). Reads the anon-id
  * cookie set by the proxy on first page load, enriches the inbound event

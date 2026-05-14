@@ -22,9 +22,9 @@ Internal program. Not open source.
 | `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): bot filter, anon-cookie mint, one-shot first-visit signal. Exports `proxy` function + `config` matcher. |
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
 | `@bil/launchpad/analytics/server` | PostHog forwarder. Production-only (hard-gated to `NODE_ENV=production`). Exports `capture`, `parseUA`. |
-| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/v1/track`. |
+| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/track`. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
-| `@bil/launchpad/routes/track` | Pre-made `POST /api/v1/track` handler. Students re-export from `app/api/v1/track/route.ts`. Reads `_lp_aid`, enriches with geo + UA, emits `first_visit` once when the cookie is freshly minted. |
+| `@bil/launchpad/routes/track` | Pre-made `POST /api/track` handler. Students re-export from `app/api/track/route.ts`. Reads `_lp_aid`, enriches with geo + UA, emits `first_visit` once when the cookie is freshly minted. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
 
 Live demos of these APIs ship in `bil-app-template/app/examples/*` —
@@ -32,7 +32,7 @@ students see them running on their own deployed subdomain.
 
 ## How a student consumes this
 
-The student-facing template repo is `Bible-Innovation-Lab/bil-app-template`. Their template's `app/api/v1/track/route.ts` is one line:
+The student-facing template repo is `Bible-Innovation-Lab/bil-app-template`. Their template's `app/api/track/route.ts` is one line:
 
 ```ts
 export { POST } from "@bil/launchpad/routes/track";

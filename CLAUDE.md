@@ -35,7 +35,7 @@ Subpath exports (see `package.json` `exports` map):
 - `@bil/launchpad/proxy` — `proxy` function + `config` matcher
 - `@bil/launchpad/bible` — `getVerse`, `getRange`, `getDailyVerse` (YouVersion)
 - `@bil/launchpad/analytics/{server,client,page-view-tracker}` — PostHog forwarder + 1KB beacon + auto-page-view client component
-- `@bil/launchpad/routes/track` — pre-made App Router handler for `/api/v1/track`
+- `@bil/launchpad/routes/track` — pre-made App Router handler for `/api/track`
 - `@bil/launchpad/config/next` — `withLaunchpad`
 
 Live demos of these APIs live in `bil-app-template/app/examples/*`. The
@@ -78,13 +78,13 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/analytics/server.ts` — PostHog forwarder. Hard-gated to
   `NODE_ENV=production`. Exports `capture`, `parseUA`.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
-  `/api/v1/track` (versioned path). Fire-and-forget, never throws.
+  `/api/track`. Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
   component. Students render it once in `app/layout.tsx`; fires
   `$pageview` with `{ path }` on mount + every client-side route change.
   Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
   both `first_visit` + `$pageview` with zero student wiring.
-- `src/routes/track.ts` — POST handler for `/api/v1/track`. Reads `_lp_aid`,
+- `src/routes/track.ts` — POST handler for `/api/track`. Reads `_lp_aid`,
   enriches with geo+UA, calls `capture`. Emits `first_visit` before inbound
   event when `_lp_fv=1` is set. The only pre-made route in the package.
 - `src/config/next.ts` — `withLaunchpad`. Adds `transpilePackages`, BIL
@@ -149,7 +149,7 @@ invocation or build-time assertion.
 - Don't add a build step. We ship TypeScript source; `transpilePackages`
   handles it on the consumer side.
 - Don't introduce a client-side analytics SDK. The server-side beacon at
-  `/api/v1/track` is the whole point (~1KB, ad-blocker proof).
+  `/api/track` is the whole point (~1KB, ad-blocker proof).
 - Don't re-export `runtime` or `config` from pre-made route files (Next 16
   won't accept it; see verification above).
 - Don't bundle Bible JSON. YouVersion Platform API is the source of truth

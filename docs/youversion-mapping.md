@@ -15,7 +15,7 @@ Generated 2026-05-13 as the design doc's primary assignment.
   env var in each student's Vercel project, injected by bil-provisioning.
 - **Auth (client → student's own API):** none. If an app builds its own
   HTTP wrapper around `getVerse` (e.g. for a client-side reader), it can
-  leave the endpoint open — same posture as `/api/v1/track`. Bible text
+  leave the endpoint open — same posture as `/api/track`. Bible text
   is publicly available; YouVersion has no rate limits; there's nothing
   to gate.
 - **Rate limits:** none enforced; YV Platform can scale.
@@ -84,7 +84,7 @@ Edge cases:
 **None.** Same model as today's `/api/track` PostHog forwarder: route is open,
 accepts requests from any origin, with no header check. Justification:
 
-- `/api/v1/track` is write-only; abuse adds noise to PostHog event counts
+- `/api/track` is write-only; abuse adds noise to PostHog event counts
   (filterable by `app_id`) but cannot exfiltrate data.
 - Any app-built `/api/.../bible/...` endpoint returns publicly-available
   Bible text. There's a hundred ways to get Bible text on the internet
