@@ -3,8 +3,7 @@
  * Smoke + behavior tests for @bil/launchpad/bible (src/bible/server.ts).
  * Run with: bun src/bible/server.test.ts
  *
- * Uses a stubbed fetch — does not hit YouVersion. The probe in
- * docs/youversion-mapping.md verifies the real call against production.
+ * Uses a stubbed fetch — does not hit YouVersion.
  */
 
 import {

@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # Build notes for AI assistants
 
 This repo is the **source for the `@bil/launchpad` npm package**, not a
@@ -76,7 +74,9 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/bible/server.test.ts` — 21 unit tests with stubbed `fetch`. Run with
   `bun src/bible/server.test.ts`.
 - `src/analytics/server.ts` — PostHog forwarder. Hard-gated to
-  `NODE_ENV=production`. Exports `capture`, `parseUA`.
+  `NODE_ENV=production`. Exports `capture`. Constructs `PostHog` with
+  `disableGeoip: false` so PostHog auto-resolves `$geoip_*` properties
+  from the `$ip` we pass through.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
   `/api/track`. Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
@@ -85,15 +85,15 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
   Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
   both `first_visit` + `$pageview` with zero student wiring.
 - `src/routes/track.ts` — POST handler for `/api/track`. Reads `_lp_aid`,
-  enriches with geo+UA, calls `capture`. Emits `first_visit` before inbound
-  event when `_lp_fv=1` is set. The only pre-made route in the package.
+  forwards the client `User-Agent` and `x-forwarded-for` as PostHog's
+  `$useragent` + `$ip` properties (PostHog auto-derives `$browser`,
+  `$os`, `$geoip_*`). Emits `first_visit` before inbound event when
+  `_lp_fv=1` is set. The only pre-made route in the package.
 - `src/config/next.ts` — `withLaunchpad`. Adds `transpilePackages`, BIL
   security headers (HSTS, X-Frame-Options, etc.), asserts `APP_ID`,
   `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production.
-- `docs/PRD.md` — platform requirements.
 - `docs/ROADMAP.md` — scoped-out ideas (share helpers, auth, push) with
   re-add signals. Read this before suggesting we add anything back.
-- `docs/youversion-mapping.md` — API integration brief.
 
 ## Canonical patterns
 

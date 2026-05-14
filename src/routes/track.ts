@@ -5,19 +5,30 @@
  * `app/api/track/route.ts` so logic propagates via `bun update`.
  *
  * Always returns 204 (analytics never break the app). Reads the anon-id
- * cookie set by the proxy on first page load, enriches the inbound event
- * with geo + parsed UA, forwards to PostHog. Emits `first_visit` first
- * when the proxy signals via `_lp_fv=1` on cookie mint.
+ * cookie set by the proxy on first page load, forwards the client's
+ * `User-Agent` + IP as PostHog's `$useragent` + `$ip` properties (PostHog
+ * derives `$browser`, `$os`, `$geoip_*` server-side), then captures the
+ * inbound event. Emits `first_visit` first when the proxy signals via
+ * `_lp_fv=1` on cookie mint.
+ *
+ * One-time PostHog UI step: enable the "User Agent Populator" CDP app
+ * for `$browser` / `$browser_version` auto-derivation.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { capture, parseUA } from "../analytics/server";
+import { capture } from "../analytics/server";
 import type { JSONValue } from "../analytics/client";
 
 const APP_ID = process.env.APP_ID ?? "unknown";
-const LIB_TAG = "bil-launchpad-server";
 
 type Body = { event: string; props?: Record<string, JSONValue> };
+
+function clientIp(req: NextRequest): string | undefined {
+  // Vercel sets x-forwarded-for as "<client>, <edge>"; first entry is client.
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || undefined;
+  return req.headers.get("x-real-ip") ?? undefined;
+}
 
 export async function POST(req: NextRequest) {
   const anonId = req.cookies.get("_lp_aid")?.value;
@@ -37,22 +48,14 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  // Enrich server-side. Never trust the client to set these.
+  // Forward the raw client UA + IP — PostHog auto-derives $browser,
+  // $os, $geoip_* from these. Never trust the client to set them.
   const ua = req.headers.get("user-agent") ?? "";
-  const { browser, os } = parseUA(ua);
-  const country =
-    req.headers.get("x-vercel-ip-country") ?? // Vercel edge geo
-    req.headers.get("cf-ipcountry") ?? // Cloudflare
-    "unknown";
+  const ip = clientIp(req);
 
-  const baseProps: Record<string, JSONValue> = {
-    app_id: APP_ID,
-    $lib: LIB_TAG,
-    country,
-    browser,
-    os,
-    ...(body.props ?? {}),
-  };
+  const enrichment: Record<string, JSONValue> = { app_id: APP_ID };
+  if (ua) enrichment.$useragent = ua;
+  if (ip) enrichment.$ip = ip;
 
   // If proxy just minted the cookie (one-shot _lp_fv=1), emit first_visit
   // BEFORE the inbound event so funnel ordering is preserved.
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
     await capture({
       distinctId: anonId,
       event: "first_visit",
-      properties: { app_id: APP_ID, $lib: LIB_TAG, country, browser, os },
+      properties: enrichment,
       timestamp: new Date(Date.now() - 1),
     });
   }
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
   await capture({
     distinctId: anonId,
     event: body.event,
-    properties: baseProps,
+    properties: { ...enrichment, ...(body.props ?? {}) },
     timestamp: new Date(),
   });
 

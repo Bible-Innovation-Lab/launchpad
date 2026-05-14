@@ -33,7 +33,15 @@ function getClient(): PostHog | null {
     return null;
   }
   const host = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
-  client = new PostHog(key, { host, flushAt: 1, flushInterval: 1000 });
+  // disableGeoip defaults to true in posthog-node v3+; we re-enable
+  // because we pass real client IPs through `$ip` and want PostHog
+  // to populate `$geoip_country_code`, `$geoip_city_name`, etc.
+  client = new PostHog(key, {
+    host,
+    flushAt: 1,
+    flushInterval: 1000,
+    disableGeoip: false,
+  });
   return client;
 }
 
@@ -74,21 +82,3 @@ export async function capture(input: CaptureInput): Promise<void> {
   }
 }
 
-// Quickly classify a user-agent string into {browser, os} so PostHog
-// gets useful low-cardinality dimensions instead of the raw UA blob.
-export function parseUA(ua: string): { browser: string; os: string } {
-  let os = "other";
-  if (/windows nt/i.test(ua)) os = "windows";
-  else if (/mac os x|macintosh/i.test(ua)) os = "macos";
-  else if (/android/i.test(ua)) os = "android";
-  else if (/iphone|ipad|ipod/i.test(ua)) os = "ios";
-  else if (/linux/i.test(ua)) os = "linux";
-
-  let browser = "other";
-  if (/edg\//i.test(ua)) browser = "edge";
-  else if (/firefox\//i.test(ua)) browser = "firefox";
-  else if (/chrome\//i.test(ua)) browser = "chrome";
-  else if (/safari\//i.test(ua)) browser = "safari";
-
-  return { browser, os };
-}

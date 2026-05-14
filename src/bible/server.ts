@@ -3,7 +3,7 @@
  *
  * Server-only. Holds YOUVERSION_API_KEY, calls
  * https://api.youversion.com/v1/bibles/111/passages/{usfm} (NIV 2011, locked).
- * Auth via `X-YVP-App-Key` header. See docs/youversion-mapping.md.
+ * Auth via `X-YVP-App-Key` header.
  *
  * Two ways to use it:
  *   1) Top-level functions (read API key from process.env at first call):
