@@ -1,7 +1,7 @@
 {
   "name": "@bil/launchpad",
   "version": "0.1.0",
-  "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), analytics with auto page-view tracking, and a pre-made track route. Consumed by the bil-app-template student starter.",
+  "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), and analytics with auto page-view tracking. Consumed by the bil-app-template student starter.",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,10 +10,9 @@
   "exports": {
     "./proxy": "./src/proxy/index.ts",
     "./bible": "./src/bible/server.ts",
-    "./analytics/server": "./src/analytics/server.ts",
     "./analytics/client": "./src/analytics/client.ts",
     "./analytics/page-view-tracker": "./src/analytics/page-view-tracker.tsx",
-    "./routes/track": "./src/routes/track.ts",
+    "./routes/analytics": "./src/routes/analytics.ts",
     "./config/next": "./src/config/next.ts"
   },
   "files": [
@@ -30,9 +29,6 @@
     "next": ">=16.0.0",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
-  },
-  "dependencies": {
-    "posthog-node": "^5.33.7"
   },
   "devDependencies": {
     "@types/bun": "^1.3.13",

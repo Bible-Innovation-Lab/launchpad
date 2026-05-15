@@ -8,7 +8,7 @@
  * client-side route change. Renders no DOM.
  *
  * Pair with the launchpad proxy's `_lp_fv` first-visit signal: the first
- * $pageview POST to /api/track will emit `first_visit` alongside it,
+ * $pageview POST to /api/analytics will emit `first_visit` alongside it,
  * so a student app gets both events with zero wiring.
  */
 

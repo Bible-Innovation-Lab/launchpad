@@ -21,21 +21,17 @@ Internal program. Not open source.
 |---|---|
 | `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): bot filter, anon-cookie mint, one-shot first-visit signal. Exports `proxy` function + `config` matcher. |
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
-| `@bil/launchpad/analytics/server` | PostHog forwarder. Production-only (hard-gated to `NODE_ENV=production`). Exports `capture`. |
-| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/track`. |
+| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
-| `@bil/launchpad/routes/track` | Pre-made `POST /api/track` handler. Students re-export from `app/api/track/route.ts`. Reads `_lp_aid`, forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` once when the cookie is freshly minted. |
+| `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Reads `_lp_aid`, forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` once when the cookie is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
-
-Live demos of these APIs ship in `bil-app-template/app/examples/*` —
-students see them running on their own deployed subdomain.
 
 ## How a student consumes this
 
-The student-facing template repo is `Bible-Innovation-Lab/bil-app-template`. Their template's `app/api/track/route.ts` is one line:
+The student-facing template repo is `Bible-Innovation-Lab/bil-app-template`. Their template's `app/api/analytics/route.ts` is one line:
 
 ```ts
-export { POST } from "@bil/launchpad/routes/track";
+export { POST } from "@bil/launchpad/routes/analytics";
 ```
 
 Their `proxy.ts` is two lines:
@@ -88,9 +84,9 @@ src/
 ├── proxy/index.ts                    proxy function + config matcher
 ├── bible/server.ts                   YouVersion wrapper
 ├── bible/server.test.ts              21 unit tests
-├── analytics/{client,server}.ts      beacon + forwarder
+├── analytics/client.ts               1 KB beacon
 ├── analytics/page-view-tracker.tsx   auto-page-view client component
-├── routes/track.ts                   pre-made App Router handler
+├── routes/analytics.ts               pre-made App Router handler
 └── config/next.ts                    withLaunchpad
 docs/
 └── ROADMAP.md                        scoped-out ideas (share, auth, push)
@@ -101,8 +97,9 @@ docs/
 For `$browser` / `$browser_version` to be auto-populated from the
 `$useragent` we forward, enable PostHog's **User Agent Populator** CDP
 app under Data pipelines in the PostHog UI. GeoIP enrichment (from
-`$ip`) is on by default once `disableGeoip: false` is set on the
-server SDK (already configured in `analytics/server.ts`).
+`$ip`) is automatic — PostHog's pipeline resolves `$geoip_*` properties
+whenever an event arrives with an `$ip` property set. We POST directly
+to `/capture/` over HTTP; no PostHog SDK in the deploy.
 
 ## Related repos
 

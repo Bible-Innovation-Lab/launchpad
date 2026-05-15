@@ -2,8 +2,8 @@
  * @bil/launchpad/analytics/client — client-side beacon.
  *
  * ~1 KB module. Single function: `track(event, props?)`. POSTs to
- * /api/track on the student's own deployment (same-origin from the
- * browser; mobile clients hit `<base>/api/track` over HTTPS).
+ * /api/analytics on the student's own deployment (same-origin from the
+ * browser; mobile clients hit `<base>/api/analytics` over HTTPS).
  * Fire-and-forget; analytics failures never break the user-facing app.
  *
  * The server endpoint reads the `_lp_aid` cookie (set by the proxy on
@@ -19,7 +19,7 @@ export type JSONValue = string | number | boolean | null | JSONValue[] | { [k: s
 
 export function track(event: string, props?: Record<string, JSONValue>): void {
   try {
-    void fetch("/api/track", {
+    void fetch("/api/analytics", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ event, props }),

@@ -1,25 +1,25 @@
 /**
- * POST /api/track — analytics endpoint.
+ * POST /api/analytics — analytics endpoint.
  *
  * Pre-made App Router handler. Student template re-exports `POST` from
- * `app/api/track/route.ts` so logic propagates via `bun update`.
+ * `app/api/analytics/route.ts` so logic propagates via `bun update`.
  *
- * Always returns 204 (analytics never break the app). Reads the anon-id
- * cookie set by the proxy on first page load, forwards the client's
- * `User-Agent` + IP as PostHog's `$useragent` + `$ip` properties (PostHog
- * derives `$browser`, `$os`, `$geoip_*` server-side), then captures the
- * inbound event. Emits `first_visit` first when the proxy signals via
- * `_lp_fv=1` on cookie mint.
+ * Forwards events to PostHog's HTTP capture endpoint directly — no SDK,
+ * no batching, no extra deps. Passes raw `$useragent` and `$ip` so
+ * PostHog's pipeline auto-derives `$browser` (via the User Agent
+ * Populator CDP app — enable it once in the PostHog UI) and the
+ * `$geoip_*` family. Always returns 204 — analytics never break
+ * user-facing flows.
  *
- * One-time PostHog UI step: enable the "User Agent Populator" CDP app
- * for `$browser` / `$browser_version` auto-derivation.
+ * Production-only. In dev, events log to stdout instead so the central
+ * PostHog dashboard stays free of developer noise.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { capture } from "../analytics/server";
 import type { JSONValue } from "../analytics/client";
 
 const APP_ID = process.env.APP_ID ?? "unknown";
+const POSTHOG_HOST = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
 
 type Body = { event: string; props?: Record<string, JSONValue> };
 
@@ -28,6 +28,40 @@ function clientIp(req: NextRequest): string | undefined {
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]?.trim() || undefined;
   return req.headers.get("x-real-ip") ?? undefined;
+}
+
+async function capture(payload: {
+  distinctId: string;
+  event: string;
+  properties: Record<string, JSONValue>;
+  timestamp: Date;
+}): Promise<void> {
+  // Production gate. Dev logs to stdout so developer test events never
+  // pollute the central PostHog dashboard.
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[bil-analytics] (dev)", payload.event, payload.properties);
+    return;
+  }
+  const key = process.env.POSTHOG_KEY;
+  if (!key) {
+    console.warn("[bil-analytics] POSTHOG_KEY missing in production — event dropped");
+    return;
+  }
+  try {
+    await fetch(`${POSTHOG_HOST}/capture/`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        api_key: key,
+        event: payload.event,
+        distinct_id: payload.distinctId,
+        properties: payload.properties,
+        timestamp: payload.timestamp.toISOString(),
+      }),
+    });
+  } catch (err) {
+    console.warn("[bil-analytics] capture failed:", err);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -49,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Forward the raw client UA + IP — PostHog auto-derives $browser,
-  // $os, $geoip_* from these. Never trust the client to set them.
+  // $os, $geoip_* from these server-side.
   const ua = req.headers.get("user-agent") ?? "";
   const ip = clientIp(req);
 
