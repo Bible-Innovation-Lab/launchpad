@@ -13,9 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-// Bot UAs we never want to count or mint cookies for.
-const BOT_RE = /bot\b|crawl|spider|slurp|slackbot|preview|whatsapp|telegram|discordbot|facebookexternalhit|twitterbot|linkedinbot|pingdom|uptimerobot|lighthouse|gtmetrix/i;
+import { isBotUserAgent } from "../analytics/bot-filter";
 
 export const config = {
   // Match everything except Next internals and static assets. /api routes
@@ -27,7 +25,7 @@ export function proxy(req: NextRequest): NextResponse {
   const ua = req.headers.get("user-agent") ?? "";
 
   // 1) Bot filter — pass through without minting.
-  if (BOT_RE.test(ua)) {
+  if (isBotUserAgent(ua)) {
     return NextResponse.next();
   }
 

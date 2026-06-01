@@ -15,9 +15,12 @@
  *   track("button_click", { label: "share" });
  */
 
+import { isAutomatedBrowser } from "./bot-filter";
+
 export type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]: JSONValue };
 
 export function track(event: string, props?: Record<string, JSONValue>): void {
+  if (isAutomatedBrowser()) return;
   try {
     void fetch("/api/analytics", {
       method: "POST",

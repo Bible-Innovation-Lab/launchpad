@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { isBotUserAgent } from "../analytics/bot-filter";
 import type { JSONValue } from "../analytics/client";
 
 const APP_ID = process.env.APP_ID ?? "unknown";
@@ -85,6 +86,9 @@ export async function POST(req: NextRequest) {
   // Forward the raw client UA + IP — PostHog auto-derives $browser,
   // $os, $geoip_* from these server-side.
   const ua = req.headers.get("user-agent") ?? "";
+  if (isBotUserAgent(ua)) {
+    return new NextResponse(null, { status: 204 });
+  }
   const ip = clientIp(req);
 
   const enrichment: Record<string, JSONValue> = { app_id: APP_ID };

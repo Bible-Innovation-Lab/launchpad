@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun src/bible/server.test.ts",
+    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts",
     "smoke": "bun run typecheck && bun run test"
   },
   "peerDependencies": {
