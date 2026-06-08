@@ -33,6 +33,7 @@ Subpath exports (see `package.json` `exports` map):
 - `@bil/launchpad/proxy` — `proxy` function + `config` matcher
 - `@bil/launchpad/bible` — `getVerse`, `getRange`, `getDailyVerse` (YouVersion)
 - `@bil/launchpad/analytics/{client,page-view-tracker}` — 1KB beacon + auto-page-view client component
+- `@bil/launchpad/feedback` — `<FeedbackModal />` star-rating + free-text pop-up that fires a PostHog event through the same beacon
 - `@bil/launchpad/routes/analytics` — pre-made App Router handler for `/api/analytics`
 - `@bil/launchpad/config/next` — `withLaunchpad`
 
@@ -71,10 +72,18 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
   `/api/analytics`. Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
-  component. Students render it once in `app/layout.tsx`; fires
-  `$pageview` with `{ path }` on mount + every client-side route change.
-  Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
-  both `first_visit` + `$pageview` with zero student wiring.
+ component. Students render it once in `app/layout.tsx`; fires
+ `$pageview` with `{ path }` on mount + every client-side route change.
+ Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
+ both `first_visit` + `$pageview` with zero student wiring.
+- `src/feedback/feedback-modal.tsx` — `<FeedbackModal />` controlled
+ client component. 5-star rating + "Any feedback?" textarea + X close.
+ On submit calls `track("feedback_submitted", { rating, feedback })`
+ through the analytics beacon — no new HTTP surface, distinct_id and
+ IP/UA enrichment come from `/api/analytics` for free. All labels and
+ the event name are overridable; defaults are the canonical
+ "How would you rate this game?" / "Any feedback?" copy. Inline styles
+ only — keeps the package zero-CSS.
 - `src/routes/analytics.ts` — POST handler for `/api/analytics`. Reads
   `_lp_aid`, forwards the client `User-Agent` and `x-forwarded-for` as
   PostHog's `$useragent` + `$ip` properties (PostHog auto-derives

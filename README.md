@@ -23,6 +23,7 @@ Internal program. Not open source.
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
+| `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star "How would you rate this game?" picker, an "Any feedback?" textarea, and an X close button. Submitting fires a `feedback_submitted` PostHog event through the existing `/api/analytics` beacon. |
 | `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Reads `_lp_aid`, forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` once when the cookie is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
 
@@ -86,6 +87,7 @@ src/
 ├── bible/server.test.ts              21 unit tests
 ├── analytics/client.ts               1 KB beacon
 ├── analytics/page-view-tracker.tsx   auto-page-view client component
+├── feedback/feedback-modal.tsx       5-star + textarea modal → PostHog
 ├── routes/analytics.ts               pre-made App Router handler
 └── config/next.ts                    withLaunchpad
 docs/
