@@ -6,9 +6,10 @@
  * browser; mobile clients hit `<base>/api/analytics` over HTTPS).
  * Fire-and-forget; analytics failures never break the user-facing app.
  *
- * The server endpoint reads the `_lp_aid` cookie (set by the proxy on
- * first page load) and enriches with geo + parsed UA before forwarding
- * to PostHog. The client never sees the anon-id and never sets the cookie.
+ * Every beacon carries a device fingerprint hash (`fp`). The server uses
+ * the `_lp_aid` cookie as identity when present; otherwise it derives a
+ * deterministic anon-id from client IP + fingerprint and sets the cookie
+ * on the response. The client never sees the anon-id itself.
  *
  * @example
  *   import { track } from "@bil/launchpad/analytics/client";
@@ -16,20 +17,25 @@
  */
 
 import { isAutomatedBrowser } from "./bot-filter";
+import { deviceFingerprint } from "./fingerprint";
 
 export type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]: JSONValue };
 
 export function track(event: string, props?: Record<string, JSONValue>): void {
   if (isAutomatedBrowser()) return;
   try {
-    void fetch("/api/analytics", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ event, props }),
-      keepalive: true, // survives pagehide / navigation
-    }).catch(() => {
-      // swallow — analytics never break the app
-    });
+    void deviceFingerprint()
+      .then((fp) =>
+        fetch("/api/analytics", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ event, props, fp }),
+          keepalive: true, // survives pagehide / navigation
+        }),
+      )
+      .catch(() => {
+        // swallow — analytics never break the app
+      });
   } catch {
     // synchronous failure (e.g. CSP block); same posture
   }

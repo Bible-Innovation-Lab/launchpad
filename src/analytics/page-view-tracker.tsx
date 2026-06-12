@@ -7,9 +7,9 @@
  * `track("$pageview", { path })` on initial mount and on every
  * client-side route change. Renders no DOM.
  *
- * Pair with the launchpad proxy's `_lp_fv` first-visit signal: the first
- * $pageview POST to /api/analytics will emit `first_visit` alongside it,
- * so a student app gets both events with zero wiring.
+ * The first $pageview POST from a new identity also emits `first_visit`
+ * (minted in the analytics route), so a student app gets both events
+ * with zero wiring.
  */
 
 import { usePathname } from "next/navigation";

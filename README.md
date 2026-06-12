@@ -19,12 +19,12 @@ Internal program. Not open source.
 
 | Sub-path | What it is |
 |---|---|
-| `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): bot filter, anon-cookie mint, one-shot first-visit signal. Exports `proxy` function + `config` matcher. |
+| `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): legacy-cookie cleanup. Identity minting now lives in the analytics route. Exports `proxy` function + `config` matcher. |
 | `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
-| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`. |
+| `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`, carrying a device-fingerprint hash for identity recovery. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
 | `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star "How would you rate this game?" picker, an "Any feedback?" textarea, and an X close button. Submitting fires a `feedback_submitted` PostHog event through the existing `/api/analytics` beacon. |
-| `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Reads `_lp_aid`, forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` once when the cookie is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
+| `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Uses the `_lp_aid` cookie as identity when present; otherwise derives a deterministic anon-id from client IP + device fingerprint and sets the cookie. Forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` when an id is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
 
 ## How a student consumes this

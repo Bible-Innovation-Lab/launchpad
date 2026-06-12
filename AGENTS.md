@@ -61,8 +61,8 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 
 ## File-by-file map
 
-- `src/proxy/index.ts` — proxy function + matcher. Bot filter →
-  anon-cookie mint → one-shot `_lp_fv` first-visit signal.
+- `src/proxy/index.ts` — proxy function + matcher. Identity is no longer
+  minted here; only clears the legacy `_lp_fv` cookie from old versions.
 - `src/bible/server.ts` — YouVersion Platform API wrapper. Top-level facade
   uses module-singleton client; factory `createYouVersionClient` exists for
   tests. Header is `X-YVP-App-Key`. `bible_id` is hard-coded to `111` (NIV
@@ -72,24 +72,30 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
   `/api/analytics`. Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
- component. Students render it once in `app/layout.tsx`; fires
- `$pageview` with `{ path }` on mount + every client-side route change.
- Pairs with the proxy's `_lp_fv` first-visit signal so a fresh app gets
- both `first_visit` + `$pageview` with zero student wiring.
+  component. Students render it once in `app/layout.tsx`; fires
+  `$pageview` with `{ path }` on mount + every client-side route change.
+  The first beacon from a new identity also yields `first_visit` (minted
+  in the route), so a fresh app gets both events with zero student wiring.
 - `src/feedback/feedback-modal.tsx` — `<FeedbackModal />` controlled
- client component. 5-star rating + "Any feedback?" textarea + X close.
- On submit calls `track("feedback_submitted", { rating, feedback })`
- through the analytics beacon — no new HTTP surface, distinct_id and
- IP/UA enrichment come from `/api/analytics` for free. All labels and
- the event name are overridable; defaults are the canonical
- "How would you rate this game?" / "Any feedback?" copy. Inline styles
- only — keeps the package zero-CSS.
-- `src/routes/analytics.ts` — POST handler for `/api/analytics`. Reads
-  `_lp_aid`, forwards the client `User-Agent` and `x-forwarded-for` as
-  PostHog's `$useragent` + `$ip` properties (PostHog auto-derives
-  `$browser`, `$os`, `$geoip_*`), POSTs directly to PostHog's HTTP
-  capture endpoint — no SDK. Emits `first_visit` before inbound event
-  when `_lp_fv=1` is set. The only pre-made route in the package.
+  client component. 5-star rating + "Any feedback?" textarea + X close.
+  On submit calls `track("feedback_submitted", { rating, feedback })`
+  through the analytics beacon — no new HTTP surface, distinct_id and
+  IP/UA enrichment come from `/api/analytics` for free. All labels and
+  the event name are overridable; defaults are the canonical
+  "How would you rate this game?" / "Any feedback?" copy. Inline styles
+  only — keeps the package zero-CSS.
+- `src/routes/analytics.ts` — POST handler for `/api/analytics`. Identity
+  resolver: uses the `_lp_aid` cookie when present, otherwise derives a
+  deterministic anon-id `sha256(ip|fingerprint)` from the beacon's `fp`
+  field and sets the cookie. Forwards the client `User-Agent` and
+  `x-forwarded-for` as PostHog's `$useragent` + `$ip` properties (PostHog
+  auto-derives `$browser`, `$os`, `$geoip_*`), POSTs directly to PostHog's
+  HTTP capture endpoint — no SDK. Emits `first_visit` before the inbound
+  event when an id is freshly minted. The only pre-made route in the
+  package.
+- `src/analytics/fingerprint.ts` — client-side device fingerprint
+  (screen, WebGL renderer, canvas, timezone, locale, hardware) hashed to
+  SHA-256. Memoized per page load; sent as `fp` with every beacon.
 - `src/config/next.ts` — `withLaunchpad`. Adds `transpilePackages`, BIL
   security headers (HSTS, X-Frame-Options, etc.), asserts `APP_ID`,
   `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production.

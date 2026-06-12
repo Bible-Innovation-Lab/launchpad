@@ -4,6 +4,14 @@
  * Pre-made App Router handler. Student template re-exports `POST` from
  * `app/api/analytics/route.ts` so logic propagates via `bun update`.
  *
+ * Identity: the `_lp_aid` cookie is the anon-id when present. When absent,
+ * the id is DERIVED deterministically from client IP + the device
+ * fingerprint the beacon carries (`fp`), then cached in the cookie. Losing
+ * the cookie on the same device + network therefore re-derives the SAME id
+ * — returning users reconnect to their history instead of being counted
+ * as new. (Identical device models behind one NAT can still collide; the
+ * cookie minimizes this to mint-time only.)
+ *
  * Forwards events to PostHog's HTTP capture endpoint directly — no SDK,
  * no batching, no extra deps. Passes raw `$useragent` and `$ip` so
  * PostHog's pipeline auto-derives `$browser` (via the User Agent
@@ -22,13 +30,28 @@ import type { JSONValue } from "../analytics/client";
 const APP_ID = process.env.APP_ID ?? "unknown";
 const POSTHOG_HOST = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
 
-type Body = { event: string; props?: Record<string, JSONValue> };
+type Body = { event: string; props?: Record<string, JSONValue>; fp?: string };
 
 function clientIp(req: NextRequest): string | undefined {
   // Vercel sets x-forwarded-for as "<client>, <edge>"; first entry is client.
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]?.trim() || undefined;
   return req.headers.get("x-real-ip") ?? undefined;
+}
+
+/**
+ * Deterministic anon-id: sha256(ip|fingerprint) rendered in UUID shape so
+ * downstream tooling treats it like the previous crypto.randomUUID() ids.
+ */
+async function deriveAnonId(ip: string, fp: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${ip}|${fp}`),
+  );
+  const hex = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 async function capture(payload: {
@@ -66,13 +89,6 @@ async function capture(payload: {
 }
 
 export async function POST(req: NextRequest) {
-  const anonId = req.cookies.get("_lp_aid")?.value;
-  if (!anonId) {
-    // No cookie means proxy didn't mint one. Bot, prefetch, or curl.
-    // Drop silently — return 204 to look like every other call.
-    return new NextResponse(null, { status: 204 });
-  }
-
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -91,14 +107,30 @@ export async function POST(req: NextRequest) {
   }
   const ip = clientIp(req);
 
+  // Identity resolution. Cookie wins (stable across network changes);
+  // otherwise derive from IP + device fingerprint and cache in the cookie.
+  let anonId = req.cookies.get("_lp_aid")?.value;
+  let minted = false;
+  if (!anonId) {
+    const fp = typeof body.fp === "string" ? body.fp.trim().slice(0, 128) : "";
+    if (!fp) {
+      // No cookie and no fingerprint: bot, prefetch, or curl. Drop
+      // silently — 204 to look like every other call.
+      return new NextResponse(null, { status: 204 });
+    }
+    anonId = await deriveAnonId(ip ?? "", fp);
+    minted = true;
+  }
+
   const enrichment: Record<string, JSONValue> = { app_id: APP_ID };
   if (ua) enrichment.$useragent = ua;
   if (ip) enrichment.$ip = ip;
 
-  // If proxy just minted the cookie (one-shot _lp_fv=1), emit first_visit
-  // BEFORE the inbound event so funnel ordering is preserved.
-  const isFirstVisit = req.cookies.get("_lp_fv")?.value === "1";
-  if (isFirstVisit) {
+  // First sighting of this identity (no cookie yet): emit first_visit
+  // BEFORE the inbound event so funnel ordering is preserved. Re-mints on
+  // the same device+network re-derive the same id, so first_visit uniques
+  // stay correct even when this fires again after a cookie loss.
+  if (minted) {
     await capture({
       distinctId: anonId,
       event: "first_visit",
@@ -115,14 +147,13 @@ export async function POST(req: NextRequest) {
   });
 
   const res = new NextResponse(null, { status: 204 });
-  // Clear the one-shot first-visit signal so it only fires once.
-  if (isFirstVisit) {
-    res.cookies.set("_lp_fv", "", {
+  if (minted) {
+    res.cookies.set("_lp_aid", anonId, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 0,
+      maxAge: 60 * 60 * 24 * 365 * 2, // 2 years
     });
   }
   return res;
