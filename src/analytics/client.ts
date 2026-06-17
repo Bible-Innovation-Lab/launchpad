@@ -35,11 +35,33 @@ export type JSONValue = string | number | boolean | null | JSONValue[] | { [k: s
  */
 let firstBeaconDone: Promise<void> | null = null;
 
+/**
+ * Per-tab session id, minted once per browser tab/open and reused for the
+ * life of that tab (`sessionStorage` clears when the tab closes). Lets the
+ * server stamp every event with `session_id` for session-duration analysis.
+ */
+function sessionId(): string {
+  try {
+    if (typeof sessionStorage === "undefined") return "";
+    let sid = sessionStorage.getItem("_lp_sid");
+    if (!sid) {
+      sid =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem("_lp_sid", sid);
+    }
+    return sid;
+  } catch {
+    return ""; // private mode / storage disabled — session time just isn't tracked
+  }
+}
+
 function send(event: string, props: Record<string, JSONValue> | undefined, fp: string): Promise<void> {
   return fetch("/api/analytics", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ event, props, fp }),
+    body: JSON.stringify({ event, props, fp, sid: sessionId() }),
     keepalive: true, // survives pagehide / navigation
   }).then(
     () => undefined,
