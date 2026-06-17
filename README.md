@@ -25,7 +25,8 @@ Internal program. Not open source.
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
 | `@bil/launchpad/analytics/vercel-analytics` | `<VercelAnalytics />` — Vercel Web Analytics (`@vercel/analytics`). Redundant PostHog backup; render once in `app/layout.tsx`. Requires Web Analytics enabled on the Vercel project. |
 | `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star "How would you rate this game?" picker, an "Any feedback?" textarea, and an X close button. Submitting fires a `feedback_submitted` PostHog event through the existing `/api/analytics` beacon. |
-| `@bil/launchpad/realtime` | Multiplayer toolkit. `realtimeStore` / `createRealtimeStore` — an Upstash-Redis-backed KV store (with a dev in-memory fallback) for cross-invocation room/game state, namespaced by `APP_ID`. `createSSEStream` — a Server-Sent Events helper that polls the store and pushes state changes to connected players. Credentials (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) are injected by bil-provisioning, so multiplayer works in production with zero config. |
+| `@bil/launchpad/realtime` | Multiplayer toolkit (server). `realtimeStore` / `createRealtimeStore` — an Upstash-Redis-backed KV store (with a dev in-memory fallback) for cross-invocation room/game state, namespaced by `APP_ID`. `createSSEStream` — a Server-Sent Events helper that polls the store and pushes state changes to connected players. Credentials (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) are injected by bil-provisioning, so multiplayer works in production with zero config. |
+| `@bil/launchpad/realtime/client` | Multiplayer toolkit (client). `useRealtimeChannel(url)` — a React hook that subscribes to a `createSSEStream` endpoint with `EventSource` and re-renders with the latest state. Separate entry point so the server store's `@upstash/redis` never lands in a client bundle. |
 | `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Uses the `_lp_aid` cookie as identity when present; otherwise derives a deterministic anon-id from client IP + device fingerprint and sets the cookie. Forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` when an id is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
 
@@ -107,9 +108,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 ```
 
+Subscribe from a client component with the matching hook:
+
+```tsx
+"use client";
+import { useRealtimeChannel } from "@bil/launchpad/realtime/client";
+
+const { state, status } = useRealtimeChannel<RoomState>(
+  roomId ? `/api/rooms/${roomId}/stream` : null
+);
+```
+
 Keys are namespaced by `APP_ID`, so every BIL app can safely share one
-Upstash instance. `verse-duel` is the reference implementation of a full
-two-player game on top of these primitives.
+Upstash instance. The `bil-app-template` ships a complete minimal example
+(invite link → lobby → start → everyone taps → complete) built on these
+primitives; `verse-duel` is a fuller two-player reference implementation.
 
 ## Development
 
