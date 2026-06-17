@@ -25,6 +25,7 @@ Internal program. Not open source.
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. |
 | `@bil/launchpad/analytics/vercel-analytics` | `<VercelAnalytics />` — Vercel Web Analytics (`@vercel/analytics`). Redundant PostHog backup; render once in `app/layout.tsx`. Requires Web Analytics enabled on the Vercel project. |
 | `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star "How would you rate this game?" picker, an "Any feedback?" textarea, and an X close button. Submitting fires a `feedback_submitted` PostHog event through the existing `/api/analytics` beacon. |
+| `@bil/launchpad/realtime` | Multiplayer toolkit. `realtimeStore` / `createRealtimeStore` — an Upstash-Redis-backed KV store (with a dev in-memory fallback) for cross-invocation room/game state, namespaced by `APP_ID`. `createSSEStream` — a Server-Sent Events helper that polls the store and pushes state changes to connected players. Credentials (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) are injected by bil-provisioning, so multiplayer works in production with zero config. |
 | `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Uses the `_lp_aid` cookie as identity when present; otherwise derives a deterministic anon-id from client IP + device fingerprint and sets the cookie. Forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` when an id is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
 
@@ -65,8 +66,50 @@ These must be set on each student's Vercel project. The bil-provisioning service
 | `POSTHOG_KEY` | yes | shared BIL PostHog project key |
 | `POSTHOG_HOST` | optional (default `https://us.i.posthog.com`) | |
 | `YOUVERSION_API_KEY` | yes | shared key, header is `X-YVP-App-Key` |
+| `UPSTASH_REDIS_REST_URL` | optional (only needed for multiplayer) | shared Upstash Redis REST URL; bil-provisioning injects it when configured. `KV_REST_API_URL` is accepted as a fallback. |
+| `UPSTASH_REDIS_REST_TOKEN` | optional (only needed for multiplayer) | matching token; `KV_REST_API_TOKEN` accepted as a fallback. |
 
-`withLaunchpad(nextConfig)` asserts `APP_ID`, `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production.
+`withLaunchpad(nextConfig)` asserts `APP_ID`, `POSTHOG_KEY`, `YOUVERSION_API_KEY` at build time in production. The Upstash vars are **not** required at build time — apps that don't do multiplayer never touch them, and `@bil/launchpad/realtime` degrades to an in-memory dev store when they're absent.
+
+### Multiplayer (`@bil/launchpad/realtime`)
+
+The store gives you race-free shared state across serverless invocations:
+
+```ts
+// app/api/rooms/[id]/route.ts
+import { realtimeStore } from "@bil/launchpad/realtime";
+
+const ROOM_TTL = 60 * 60; // 1 hour
+
+await realtimeStore.set(`room:${id}`, state, { ttlSeconds: ROOM_TTL });
+const state = await realtimeStore.get<RoomState>(`room:${id}`);
+// Atomic matchmaking-queue claim: only one caller ever wins.
+const waiting = await realtimeStore.getDel<string>("queue:waiting");
+```
+
+Push changes to players over SSE — `EventSource` reconnects automatically,
+so the helper closes itself safely under Vercel's function timeout:
+
+```ts
+// app/api/rooms/[id]/stream/route.ts
+import { createSSEStream, realtimeStore } from "@bil/launchpad/realtime";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return createSSEStream({
+    signal: req.signal,
+    load: () => realtimeStore.get<RoomState>(`room:${id}`),
+    signature: (s) => `${s.version}:${s.status}`, // only push when this changes
+  });
+}
+```
+
+Keys are namespaced by `APP_ID`, so every BIL app can safely share one
+Upstash instance. `verse-duel` is the reference implementation of a full
+two-player game on top of these primitives.
 
 ## Development
 

@@ -15,7 +15,8 @@
     "./analytics/vercel-analytics": "./src/analytics/vercel-analytics.tsx",
     "./feedback": "./src/feedback/feedback-modal.tsx",
     "./routes/analytics": "./src/routes/analytics.ts",
-    "./config/next": "./src/config/next.ts"
+    "./config/next": "./src/config/next.ts",
+    "./realtime": "./src/realtime/index.ts"
   },
   "files": [
     "src/",
@@ -24,10 +25,11 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts",
+    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/realtime/store.test.ts",
     "smoke": "bun run typecheck && bun run test"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^1.5.0"
   },
   "peerDependencies": {
