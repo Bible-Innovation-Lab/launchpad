@@ -30,7 +30,7 @@ import type { JSONValue } from "../analytics/client";
 const APP_ID = process.env.APP_ID ?? "unknown";
 const POSTHOG_HOST = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
 
-type Body = { event: string; props?: Record<string, JSONValue>; fp?: string };
+type Body = { event: string; props?: Record<string, JSONValue>; fp?: string; sid?: string };
 
 function clientIp(req: NextRequest): string | undefined {
   // Vercel sets x-forwarded-for as "<client>, <edge>"; first entry is client.
@@ -125,6 +125,10 @@ export async function POST(req: NextRequest) {
   const enrichment: Record<string, JSONValue> = { app_id: APP_ID };
   if (ua) enrichment.$useragent = ua;
   if (ip) enrichment.$ip = ip;
+  // Per-tab session id (minted client-side) — stamps every event so session
+  // duration is computable from first/last timestamp per session_id.
+  const sid = typeof body.sid === "string" ? body.sid.trim().slice(0, 64) : "";
+  if (sid) enrichment.session_id = sid;
 
   // First sighting of this identity (no cookie yet): emit first_visit
   // BEFORE the inbound event so funnel ordering is preserved. Re-mints on
