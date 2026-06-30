@@ -194,10 +194,10 @@ const overlayStyle: React.CSSProperties = {
   inset: 0,
   backgroundColor: "rgba(0, 0, 0, 0.5)",
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-end",
   justifyContent: "center",
   zIndex: 1000,
-  padding: 16,
+  padding: "max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px)) max(16px, env(safe-area-inset-right, 16px))",
 };
 
 const panelStyle: React.CSSProperties = {
@@ -208,6 +208,8 @@ const panelStyle: React.CSSProperties = {
   padding: "32px 24px 24px",
   width: "100%",
   maxWidth: 400,
+  maxHeight: "min(90dvh, 640px)",
+  overflowY: "auto",
   boxShadow: "0 10px 40px rgba(0, 0, 0, 0.2)",
   fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
 };
@@ -222,8 +224,8 @@ const closeStyle: React.CSSProperties = {
   lineHeight: 1,
   cursor: "pointer",
   color: "#6b7280",
-  width: 32,
-  height: 32,
+  width: 44,
+  height: 44,
   borderRadius: 6,
 };
 
@@ -246,7 +248,9 @@ const starButtonStyle: React.CSSProperties = {
   border: "none",
   fontSize: 32,
   cursor: "pointer",
-  padding: 4,
+  padding: 6,
+  minWidth: 44,
+  minHeight: 44,
   lineHeight: 1,
   transition: "color 120ms ease",
 };
@@ -276,7 +280,8 @@ const textareaStyle: React.CSSProperties = {
 
 const submitStyle: React.CSSProperties = {
   width: "100%",
-  padding: "10px 16px",
+  padding: "12px 16px",
+  minHeight: 44,
   background: "#111111",
   color: "#ffffff",
   border: "none",
