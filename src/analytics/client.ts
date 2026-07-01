@@ -25,6 +25,7 @@
 
 import { isAutomatedBrowser } from "./bot-filter";
 import { deviceFingerprint } from "./fingerprint";
+import { getAppContext } from "../shell/is-standalone-shell";
 
 export type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]: JSONValue };
 
@@ -58,10 +59,11 @@ function sessionId(): string {
 }
 
 function send(event: string, props: Record<string, JSONValue> | undefined, fp: string): Promise<void> {
+  const enriched = { ...props, $app_context: getAppContext() };
   return fetch("/api/analytics", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ event, props, fp, sid: sessionId() }),
+    body: JSON.stringify({ event, props: enriched, fp, sid: sessionId() }),
     keepalive: true, // survives pagehide / navigation
   }).then(
     () => undefined,

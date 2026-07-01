@@ -17,7 +17,8 @@
     "./routes/analytics": "./src/routes/analytics.ts",
     "./config/next": "./src/config/next.ts",
     "./realtime": "./src/realtime/index.ts",
-    "./realtime/client": "./src/realtime/client.ts"
+    "./realtime/client": "./src/realtime/client.ts",
+    "./shell": "./src/shell/is-standalone-shell.ts"
   },
   "files": [
     "src/",
@@ -26,7 +27,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/realtime/store.test.ts",
+    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/realtime/store.test.ts && bun src/shell/is-standalone-shell.test.ts",
     "smoke": "bun run typecheck && bun run test"
   },
   "dependencies": {
