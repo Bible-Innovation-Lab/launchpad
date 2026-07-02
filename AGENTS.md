@@ -76,6 +76,14 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
   `$pageview` with `{ path }` on mount + every client-side route change.
   The first beacon from a new identity also yields `first_visit` (minted
   in the route), so a fresh app gets both events with zero student wiring.
+  Also calls `useSessionTimer()` so session-time events flow with the same
+  zero wiring.
+- `src/analytics/session-timer.ts` — `createSessionClock` (pure, testable
+  active-time accumulator) + `useSessionTimer()` hook. Reports active
+  (foreground) in-app time via `heartbeat` (every 20s while visible) and
+  `$pageleave` (on `visibilitychange`→hidden and `pagehide`), each carrying
+  `elapsed_ms`. Wired into `<PageViewTracker />`; no separate export needed.
+  Test: `bun src/analytics/session-timer.test.ts`.
 - `src/feedback/feedback-modal.tsx` — `<FeedbackModal />` controlled
   client component. 5-star rating + "Any feedback?" textarea + X close.
   On submit calls `track("feedback_submitted", { rating, feedback })`
