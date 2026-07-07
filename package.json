@@ -28,7 +28,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/analytics/session-timer.test.ts && bun src/realtime/store.test.ts && bun src/shell/is-standalone-shell.test.ts",
-    "smoke": "bun run typecheck && bun run test"
+    "smoke": "bun run typecheck && bun run test",
+    "verify": "bun run smoke"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
