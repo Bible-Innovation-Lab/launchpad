@@ -65,11 +65,48 @@ export function cameFromBilGame(): boolean {
 	return isBilGameUrl(document.referrer);
 }
 
+/** Community hub uses a light chrome; Scripture hub and games use dark. */
+export const COMMUNITY_HUB_HOST = "community.minigames.bible";
+
+/**
+ * Sync Capacitor status bar style to the current hub hostname.
+ * No-op on web/PWA or when the StatusBar plugin is unavailable.
+ */
+export async function syncStatusBarForHost(hostname: string): Promise<void> {
+	if (getAppContext() !== "native") return;
+
+	try {
+		const { StatusBar, Style } = await import("@capacitor/status-bar");
+		if (hostname === COMMUNITY_HUB_HOST) {
+			await StatusBar.setStyle({ style: Style.Light });
+			await StatusBar.setBackgroundColor({ color: "#fafaf9" });
+		} else {
+			await StatusBar.setStyle({ style: Style.Dark });
+			await StatusBar.setBackgroundColor({ color: "#0a1628" });
+		}
+	} catch {
+		// StatusBar plugin unavailable
+	}
+}
+
 /**
  * Open a URL outside the in-app shell (Discord, docs, etc.).
- * On Capacitor, hosts not in server.allowNavigation open in the system browser.
+ * Uses Capacitor Browser on native; window.open elsewhere.
  */
 export function openExternalUrl(url: string): void {
 	if (typeof window === "undefined") return;
+
+	if (getAppContext() === "native") {
+		void (async () => {
+			try {
+				const { Browser } = await import("@capacitor/browser");
+				await Browser.open({ url });
+			} catch {
+				window.open(url, "_blank", "noopener,noreferrer");
+			}
+		})();
+		return;
+	}
+
 	window.open(url, "_blank", "noopener,noreferrer");
 }
