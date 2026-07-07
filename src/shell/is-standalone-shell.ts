@@ -16,7 +16,9 @@ type CapacitorWindow = Window & {
 function isCapacitorNative(): boolean {
 	if (typeof window === "undefined") return false;
 	const cap = (window as CapacitorWindow).Capacitor;
-	return cap?.isNativePlatform?.() === true;
+	if (cap?.isNativePlatform?.() === true) return true;
+	const platform = cap?.getPlatform?.();
+	return platform === "android" || platform === "ios";
 }
 
 function isPwaStandalone(): boolean {
