@@ -3,10 +3,12 @@
  */
 
 import {
+	COMMUNITY_HUB_URL,
 	getAppContext,
 	isBilGameHostname,
 	isBilGameUrl,
-	isStandaloneShell
+	isStandaloneShell,
+	SCRIPTURE_HUB_URL
 } from "./is-standalone-shell";
 
 let passed = 0;
@@ -42,6 +44,16 @@ assert(
 	"miracle-merge.minigames.bible"
 );
 assert(!isBilGameUrl("https://discord.com/invite/x"), "discord invite");
+
+console.log("\nhub URLs");
+assert(
+	SCRIPTURE_HUB_URL === "https://www.minigames.bible",
+	"scripture hub uses www"
+);
+assert(
+	COMMUNITY_HUB_URL === "https://community.minigames.bible",
+	"community hub url"
+);
 
 console.log("\nisStandaloneShell (SSR / no window)");
 assert(!isStandaloneShell(), "false without browser APIs");

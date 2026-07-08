@@ -70,6 +70,24 @@ export function cameFromBilGame(): boolean {
 /** Community hub uses a light chrome; Scripture hub and games use dark. */
 export const COMMUNITY_HUB_HOST = "community.minigames.bible";
 
+/** Canonical Scripture hub URL — use www (apex has cert issues in some WebViews). */
+export const SCRIPTURE_HUB_URL = "https://www.minigames.bible";
+
+/** Canonical Community hub URL. */
+export const COMMUNITY_HUB_URL = `https://${COMMUNITY_HUB_HOST}`;
+
+/** Keep web content below the native status bar (Android edge-to-edge). */
+export async function initNativeViewportChrome(): Promise<void> {
+	if (getAppContext() !== "native") return;
+
+	try {
+		const { StatusBar } = await import("@capacitor/status-bar");
+		await StatusBar.setOverlaysWebView({ overlay: false });
+	} catch {
+		// StatusBar plugin unavailable
+	}
+}
+
 /**
  * Sync Capacitor status bar style to the current hub hostname.
  * No-op on web/PWA or when the StatusBar plugin is unavailable.
@@ -89,6 +107,21 @@ export async function syncStatusBarForHost(hostname: string): Promise<void> {
 	} catch {
 		// StatusBar plugin unavailable
 	}
+}
+
+/** Viewport chrome + status bar colors for the current host. */
+export async function syncNativeChromeForHost(hostname: string): Promise<void> {
+	await initNativeViewportChrome();
+	await syncStatusBarForHost(hostname);
+}
+
+/**
+ * Navigate to a BIL hub URL inside the shell WebView.
+ * Uses explicit assign so cross-subdomain hops work reliably in Capacitor.
+ */
+export function navigateToHub(url: string): void {
+	if (typeof window === "undefined") return;
+	window.location.assign(url);
 }
 
 /**

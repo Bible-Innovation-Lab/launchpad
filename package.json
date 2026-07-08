@@ -1,6 +1,6 @@
 {
   "name": "@bil/launchpad",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), and analytics with auto page-view tracking. Consumed by the bil-app-template student starter.",
   "private": true,
   "type": "module",
@@ -18,7 +18,8 @@
     "./config/next": "./src/config/next.ts",
     "./realtime": "./src/realtime/index.ts",
     "./realtime/client": "./src/realtime/client.ts",
-    "./shell": "./src/shell/is-standalone-shell.ts"
+    "./shell": "./src/shell/is-standalone-shell.ts",
+    "./shell/native-chrome-init": "./src/shell/native-chrome-init.tsx"
   },
   "files": [
     "src/",
@@ -39,11 +40,19 @@
     "next": ">=16.0.0",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
+    "@capacitor/app": ">=7.0.0",
     "@capacitor/browser": ">=7.0.0",
+    "@capacitor/splash-screen": ">=7.0.0",
     "@capacitor/status-bar": ">=7.0.0"
   },
   "peerDependenciesMeta": {
+    "@capacitor/app": {
+      "optional": true
+    },
     "@capacitor/browser": {
+      "optional": true
+    },
+    "@capacitor/splash-screen": {
       "optional": true
     },
     "@capacitor/status-bar": {
@@ -51,7 +60,9 @@
     }
   },
   "devDependencies": {
+    "@capacitor/app": "^7.0.5",
     "@capacitor/browser": "^7.0.5",
+    "@capacitor/splash-screen": "^7.0.5",
     "@capacitor/status-bar": "^7.0.6",
     "@types/bun": "^1.3.14",
     "@types/node": "^20.19.43",

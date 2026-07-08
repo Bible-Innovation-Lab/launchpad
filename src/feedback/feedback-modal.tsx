@@ -197,7 +197,8 @@ const overlayStyle: React.CSSProperties = {
   alignItems: "flex-end",
   justifyContent: "center",
   zIndex: 1000,
-  padding: "max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px)) max(16px, env(safe-area-inset-right, 16px))",
+  padding:
+    "max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px))",
 };
 
 const panelStyle: React.CSSProperties = {

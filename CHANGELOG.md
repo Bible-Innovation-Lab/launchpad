@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.1
+
+### Added
+
+- `@bil/launchpad/shell` — `SCRIPTURE_HUB_URL`, `COMMUNITY_HUB_URL`, `initNativeViewportChrome()`, `syncNativeChromeForHost()`, `navigateToHub()` for Capacitor safe-area and hub navigation.
+- `@bil/launchpad/shell/native-chrome-init` — `<NativeChromeInit />` client component (splash hide, status bar sync, Android back).
+- Optional peer deps: `@capacitor/app`, `@capacitor/splash-screen`.
+
+### Fixed
+
+- `FeedbackModal` overlay padding now includes top safe-area inset.
+
 ## Unreleased
 
 ### Added
