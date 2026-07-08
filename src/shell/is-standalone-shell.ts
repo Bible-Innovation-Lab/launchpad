@@ -1,3 +1,5 @@
+/// <reference path="./capacitor-shims.d.ts" />
+
 /**
  * @bil/launchpad/shell — detect PWA, iOS home screen, and Capacitor native shells.
  *

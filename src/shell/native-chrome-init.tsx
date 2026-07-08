@@ -1,3 +1,5 @@
+/// <reference path="./capacitor-shims.d.ts" />
+
 "use client";
 
 import { useEffect } from "react";

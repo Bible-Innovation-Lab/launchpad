@@ -1,5 +1,9 @@
 # Changelog
 
+### Fixed
+
+- Optional Capacitor peer deps (`@capacitor/app`, `@capacitor/browser`, `@capacitor/splash-screen`, `@capacitor/status-bar`) no longer break Next.js typecheck in web-only apps that omit them — ambient shims in `@bil/launchpad/shell`.
+
 ## 0.1.1
 
 ### Added
