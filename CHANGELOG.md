@@ -1,8 +1,11 @@
 # Changelog
 
+## 0.1.2
+
 ### Fixed
 
 - Optional Capacitor peer deps (`@capacitor/app`, `@capacitor/browser`, `@capacitor/splash-screen`, `@capacitor/status-bar`) no longer break Next.js typecheck in web-only apps that omit them — ambient shims in `@bil/launchpad/shell`.
+- `getAppContext()` / `isStandaloneShell()` treat `html.cap-native` as Capacitor native (late bridge) and recognize `fullscreen` / `minimal-ui` PWA display modes.
 
 ## 0.1.1
 

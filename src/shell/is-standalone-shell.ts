@@ -15,17 +15,26 @@ type CapacitorWindow = Window & {
 	};
 };
 
+function hasCapNativeClass(): boolean {
+	if (typeof document === "undefined") return false;
+	return document.documentElement.classList.contains("cap-native");
+}
+
 function isCapacitorNative(): boolean {
 	if (typeof window === "undefined") return false;
 	const cap = (window as CapacitorWindow).Capacitor;
 	if (cap?.isNativePlatform?.() === true) return true;
 	const platform = cap?.getPlatform?.();
-	return platform === "android" || platform === "ios";
+	if (platform === "android" || platform === "ios") return true;
+	// native-chrome-init.js marks Cap WebViews even if the bridge loads late
+	return hasCapNativeClass();
 }
 
 function isPwaStandalone(): boolean {
 	if (typeof window === "undefined") return false;
 	if (window.matchMedia("(display-mode: standalone)").matches) return true;
+	if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+	if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
 	const nav = window.navigator as Navigator & { standalone?: boolean };
 	return nav.standalone === true;
 }

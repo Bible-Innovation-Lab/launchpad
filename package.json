@@ -1,6 +1,6 @@
 {
   "name": "@bil/launchpad",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), and analytics with auto page-view tracking. Consumed by the bil-app-template student starter.",
   "private": true,
   "type": "module",
