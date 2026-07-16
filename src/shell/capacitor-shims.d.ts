@@ -41,3 +41,25 @@ declare module "@capacitor/status-bar" {
 		setBackgroundColor(options: { color: string }): Promise<void>;
 	};
 }
+
+declare module "@capacitor/local-notifications" {
+	export const LocalNotifications: {
+		addListener(
+			event: "localNotificationActionPerformed",
+			handler: (notification: {
+				notification: { extra?: { url?: string } };
+			}) => void
+		): Promise<{ remove: () => Promise<void> }>;
+	};
+}
+
+declare module "@capacitor/push-notifications" {
+	export const PushNotifications: {
+		addListener(
+			event: "pushNotificationActionPerformed",
+			handler: (action: {
+				notification: { data?: { url?: string } };
+			}) => void
+		): Promise<{ remove: () => Promise<void> }>;
+	};
+}

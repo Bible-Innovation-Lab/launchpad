@@ -8,10 +8,11 @@ import {
 	syncNativeChromeForHost,
 	syncStatusBarForHost
 } from "./is-standalone-shell";
+import { initNativeNotificationListeners } from "./native-notification-listeners";
 
 /**
- * Initializes Capacitor splash hide, status bar, and Android back when
- * a BIL site runs inside the native shell.
+ * Initializes Capacitor splash hide, status bar, Android back, and
+ * notification tap listeners when a BIL site runs inside the native shell.
  */
 export function NativeChromeInit() {
 	useEffect(() => {
@@ -28,6 +29,7 @@ export function NativeChromeInit() {
 			}
 
 			await syncNativeChromeForHost(window.location.hostname);
+			await initNativeNotificationListeners();
 
 			try {
 				const { App } = await import("@capacitor/app");

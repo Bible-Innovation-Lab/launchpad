@@ -72,12 +72,15 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/analytics/client.ts` — ~1KB `track(event, props?)` beacon. POSTs to
   `/api/analytics`. Fire-and-forget, never throws.
 - `src/analytics/page-view-tracker.tsx` — `<PageViewTracker />` client
-  component. Students render it once in `app/layout.tsx`; fires
-  `$pageview` with `{ path }` on mount + every client-side route change.
-  The first beacon from a new identity also yields `first_visit` (minted
-  in the route), so a fresh app gets both events with zero student wiring.
-  Also calls `useSessionTimer()` so session-time events flow with the same
-  zero wiring.
+ component. Students render it once in `app/layout.tsx`; fires
+ `$pageview` with `{ path }` on mount + every client-side route change.
+ The first beacon from a new identity also yields `first_visit` (minted
+ in the route), so a fresh app gets both events with zero student wiring.
+ Also calls `useSessionTimer()` so session-time events flow with the same
+ zero wiring.
+- `src/shell/native-chrome-init.tsx` — Capacitor splash, status bar, back
+ button, and notification tap listeners (`localNotificationActionPerformed`
+ / push tap). Soft-ask + schedule + FCM token POST stay in the hub.
 - `src/analytics/session-timer.ts` — `createSessionClock` (pure, testable
   active-time accumulator) + `useSessionTimer()` hook. Reports active
   (foreground) in-app time via `heartbeat` (every 20s while visible) and
