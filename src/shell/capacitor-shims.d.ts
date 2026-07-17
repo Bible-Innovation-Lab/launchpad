@@ -2,6 +2,9 @@
  * Minimal typings for optional Capacitor peer deps.
  * Real @capacitor/* packages take precedence when installed; these shims
  * let web-only consumers typecheck launchpad shell code without them.
+ *
+ * Keep method surfaces in sync with consumer `lib/native-notifications.ts`
+ * (requestPermissions / schedule / cancel / register).
  */
 
 declare module "@capacitor/app" {
@@ -43,7 +46,26 @@ declare module "@capacitor/status-bar" {
 }
 
 declare module "@capacitor/local-notifications" {
+	export type PermissionState = "prompt" | "prompt-with-rationale" | "granted" | "denied";
+
 	export const LocalNotifications: {
+		requestPermissions(): Promise<{ display: PermissionState }>;
+		checkPermissions(): Promise<{ display: PermissionState }>;
+		cancel(options: {
+			notifications: Array<{ id: number }>;
+		}): Promise<void>;
+		schedule(options: {
+			notifications: Array<{
+				id: number;
+				title: string;
+				body: string;
+				schedule?: {
+					on?: { hour?: number; minute?: number };
+					allowWhileIdle?: boolean;
+				};
+				extra?: { url?: string };
+			}>;
+		}): Promise<void>;
 		addListener(
 			event: "localNotificationActionPerformed",
 			handler: (notification: {
@@ -54,12 +76,25 @@ declare module "@capacitor/local-notifications" {
 }
 
 declare module "@capacitor/push-notifications" {
+	export type PermissionState = "prompt" | "prompt-with-rationale" | "granted" | "denied";
+
 	export const PushNotifications: {
+		requestPermissions(): Promise<{ receive: PermissionState }>;
+		checkPermissions(): Promise<{ receive: PermissionState }>;
+		register(): Promise<void>;
 		addListener(
 			event: "pushNotificationActionPerformed",
 			handler: (action: {
 				notification: { data?: { url?: string } };
 			}) => void
+		): Promise<{ remove: () => Promise<void> }>;
+		addListener(
+			event: "registration",
+			handler: (token: { value: string }) => void
+		): Promise<{ remove: () => Promise<void> }>;
+		addListener(
+			event: "registrationError",
+			handler: (error: { error: string }) => void
 		): Promise<{ remove: () => Promise<void> }>;
 	};
 }

@@ -56,6 +56,11 @@ check("chapter only", refToUsfm("John 3") === "JHN.3");
 check("multi-word book (1 Corinthians)", refToUsfm("1 Corinthians 13:4") === "1CO.13.4");
 check("multi-word book (Song of Solomon)", refToUsfm("Song of Solomon 1:1") === "SNG.1.1");
 check("lowercase book name normalized", refToUsfm("john 3:16") === "JHN.3.16");
+check("USFM chapter passthrough", refToUsfm("GEN.1") === "GEN.1");
+check("USFM verse passthrough", refToUsfm("JHN.3.16") === "JHN.3.16");
+check("USFM range passthrough", refToUsfm("MAT.21.12-17") === "MAT.21.12-17");
+check("USFM numbered book passthrough", refToUsfm("1SA.17") === "1SA.17");
+check("USFM lowercase normalized", refToUsfm("jhn.3.16") === "JHN.3.16");
 check("Psalm singular → Psalms is NOT auto-aliased (v0.1.0 strict)",
   (() => {
     try { refToUsfm("Psalm 23:1"); return false; }
@@ -66,6 +71,8 @@ await expectThrows("bad book name throws BibleRefError",
   () => refToUsfm("Bogus 1:1"), BibleRefError);
 await expectThrows("malformed shape throws BibleRefError",
   () => refToUsfm("not a reference"), BibleRefError);
+await expectThrows("bad USFM book throws BibleRefError",
+  () => refToUsfm("XYZ.1.1"), BibleRefError);
 
 // ---------------------------------------------------------------------------
 // Fake fetch helper
@@ -113,6 +120,15 @@ console.log("\ngetRange —");
   const p = await yv.getRange("John 3:16-17");
   check("range returns one Passage", p.id === "JHN.3.16-17");
   check("range URL uses range shape", stub.calls[0].url.includes("/passages/JHN.3.16-17"));
+}
+{
+  const stub = stubFetch([
+    { status: 200, body: { id: "GEN.1", reference: "Genesis 1", content: "In the beginning..." } },
+  ]);
+  const yv = createYouVersionClient({ apiKey: "test-key", fetch: stub.fn });
+  const p = await yv.getRange("GEN.1");
+  check("USFM getRange passthrough", p.id === "GEN.1");
+  check("USFM getRange URL", stub.calls[0].url.includes("/passages/GEN.1?format=text"));
 }
 
 // ---------------------------------------------------------------------------

@@ -106,18 +106,40 @@ const USFM_BOOKS: Record<string, string> = {
 //   "John 3:16-21"   → "JHN.3.16-21"
 //   "John 3"         → "JHN.3"     (whole chapter)
 //   "1 Corinthians 13:4-7" → "1CO.13.4-7"
+//   "JHN.3.16" / "GEN.1" / "MAT.21.12-17" → passed through (already USFM)
 //
 // Throws BibleRefError on unrecognized book or malformed shape.
 
 const REF_RE =
   /^\s*((?:[1-3]\s+)?[A-Za-z][A-Za-z\s]*?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?\s*$/;
 
+/** YouVersion USFM passage id: GEN.1 | JHN.3.16 | MAT.21.12-17 | 1SA.17 */
+const USFM_ID_RE =
+  /^\s*([1-3]?[A-Za-z]{2,3})\.(\d+)(?:\.(\d+)(?:-(\d+))?)?\s*$/;
+
 // Case-insensitive lookup: build once, key by lowercase book name.
 const USFM_LOOKUP: Record<string, string> = Object.fromEntries(
   Object.entries(USFM_BOOKS).map(([name, id]) => [name.toLowerCase(), id])
 );
 
+const USFM_BOOK_IDS = new Set(Object.values(USFM_BOOKS));
+
 export function refToUsfm(ref: string): string {
+  const usfmMatch = USFM_ID_RE.exec(ref);
+  if (usfmMatch) {
+    const [, bookRaw, chapterStr, verseStartStr, verseEndStr] = usfmMatch;
+    const book = bookRaw.toUpperCase();
+    if (!USFM_BOOK_IDS.has(book)) {
+      throw new BibleRefError(ref, `Unknown USFM book: ${bookRaw}`);
+    }
+    let usfm = `${book}.${chapterStr}`;
+    if (verseStartStr) {
+      usfm += `.${verseStartStr}`;
+      if (verseEndStr) usfm += `-${verseEndStr}`;
+    }
+    return usfm;
+  }
+
   const m = REF_RE.exec(ref);
   if (!m) throw new BibleRefError(ref);
   const [, rawBook, chapterStr, verseStartStr, verseEndStr] = m;
