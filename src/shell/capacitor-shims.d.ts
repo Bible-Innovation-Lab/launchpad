@@ -1,14 +1,18 @@
 /**
  * Minimal typings for optional Capacitor peer deps.
- * Real @capacitor/* packages take precedence when installed; these shims
- * let web-only consumers typecheck launchpad shell code without them.
+ * These ambient modules are pulled into consumers that import launchpad
+ * shell entrypoints (`/// <reference path="./capacitor-shims.d.ts" />`),
+ * so they define the App/Browser/etc. surface used for typecheck even when
+ * the real @capacitor/* packages are installed. Keep this surface aligned
+ * with methods/events consumers call (e.g. minimizeApp, appUrlOpen).
  *
- * Keep method surfaces in sync with consumer `lib/native-notifications.ts`
- * (requestPermissions / schedule / cancel / register).
+ * Also keep notification methods in sync with consumer
+ * `lib/native-notifications.ts` (requestPermissions / schedule / cancel / register).
  */
 
 declare module "@capacitor/app" {
 	export const App: {
+		minimizeApp(): Promise<void>;
 		addListener(
 			event: "backButton",
 			handler: (info: { canGoBack: boolean }) => void
@@ -16,6 +20,10 @@ declare module "@capacitor/app" {
 		addListener(
 			event: "appStateChange",
 			handler: (state: { isActive: boolean }) => void
+		): Promise<{ remove: () => Promise<void> }>;
+		addListener(
+			event: "appUrlOpen",
+			handler: (event: { url: string }) => void
 		): Promise<{ remove: () => Promise<void> }>;
 	};
 }
