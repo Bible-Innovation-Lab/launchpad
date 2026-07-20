@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * @bil/launchpad/shell/hub — hub URL resolution + HubLink.
+ * @bil/launchpad/shell/hub — HubProvider + HubLink (client).
  *
- * Wrap the app once with `<HubProvider hub={siteConfig.hub}>`. HubLink and
- * getHubLink() read from context (and still respect `process.env.HUB`).
+ * Resolve hub on the server with `@bil/launchpad/shell/hub-kind`
+ * (`resolveHubKind(siteConfig.hub)` respects `process.env.HUB`), then pass
+ * the result into `<HubProvider hub={...}>`. Do not call `resolveHubKind`
+ * from client code — non-NEXT_PUBLIC env is unavailable in the browser.
  */
 
 import {
@@ -13,23 +15,15 @@ import {
 	type ReactNode,
 } from "react";
 import {
-	cameFromBilGame,
-	COMMUNITY_HUB_URL,
 	getAppContext,
 	isStandaloneShell,
 	navigateToHub,
-	SCRIPTURE_HUB_URL,
 } from "./is-standalone-shell";
+import { HUBS, type HubKind } from "./hub-kind";
 
-export const HUBS = {
-	scripture: { url: SCRIPTURE_HUB_URL, label: "All games" },
-	community: {
-		url: COMMUNITY_HUB_URL,
-		label: "Community games",
-	},
-} as const;
-
-export type HubKind = keyof typeof HUBS;
+export { HUBS, type HubKind };
+// resolveHubKind / getHubLink live only on `@bil/launchpad/shell/hub-kind`
+// so they are not pulled into the client bundle via this entry.
 
 type HubContextValue = {
 	hub: HubKind;
@@ -37,27 +31,16 @@ type HubContextValue = {
 
 const HubContext = createContext<HubContextValue | null>(null);
 
-export function resolveHubKind(preferred?: HubKind): HubKind {
-	const env = typeof process !== "undefined" ? process.env.HUB?.trim() : undefined;
-	if (env === "community") return "community";
-	if (env === "scripture") return "scripture";
-	return preferred ?? "scripture";
-}
-
-export function getHubLink(preferred?: HubKind) {
-	return HUBS[resolveHubKind(preferred)];
-}
-
 export function HubProvider({
-	hub = "scripture",
+	hub,
 	children,
 }: {
-	hub?: HubKind;
+	/** Already-resolved hub kind from the server layout. Required. */
+	hub: HubKind;
 	children: ReactNode;
 }) {
-	const resolved = resolveHubKind(hub);
 	return (
-		<HubContext.Provider value={{ hub: resolved }}>
+		<HubContext.Provider value={{ hub }}>
 			{children}
 		</HubContext.Provider>
 	);
@@ -65,7 +48,15 @@ export function HubProvider({
 
 function useHubKind(): HubKind {
 	const ctx = useContext(HubContext);
-	return resolveHubKind(ctx?.hub);
+	if (!ctx) {
+		if (process.env.NODE_ENV !== "production") {
+			console.warn(
+				"@bil/launchpad/shell/hub: HubLink used outside HubProvider; defaulting to scripture.",
+			);
+		}
+		return "scripture";
+	}
+	return ctx.hub;
 }
 
 export type HubLinkProps = {
@@ -77,17 +68,12 @@ export function HubLink({ className }: HubLinkProps) {
 	const { url, label } = HUBS[hub];
 
 	function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
-		if (getAppContext() === "native") {
+		// Always target the hub URL. Do not use history.back() — after SPA
+		// navigations document.referrer is stale and back() can land on a
+		// previous in-app route instead of the hub.
+		if (getAppContext() === "native" || isStandaloneShell()) {
 			e.preventDefault();
 			navigateToHub(url);
-			return;
-		}
-
-		if (!isStandaloneShell()) return;
-
-		if (cameFromBilGame() && window.history.length > 1) {
-			e.preventDefault();
-			window.history.back();
 		}
 	}
 

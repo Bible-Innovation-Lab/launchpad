@@ -81,6 +81,12 @@ Keep this in mind when adding new pre-made routes or modifying `proxy/index.ts`.
 - `src/shell/native-chrome-init.tsx` — Capacitor splash, status bar, back
  button, and notification tap listeners (`localNotificationActionPerformed`
  / push tap). Soft-ask + schedule + FCM token POST stay in the hub.
+- `src/shell/hub-kind.ts` — server-safe `resolveHubKind` / `HUBS` /
+ `getHubLink`. Reads `process.env.HUB` (`community` | `scripture`). Apps
+ call this from a Server Component and pass the result into `HubProvider`.
+- `src/shell/hub.tsx` — client `<HubProvider>` + `<HubLink>`. Trusts the
+ `hub` prop (do not re-read env here — non-`NEXT_PUBLIC_` vars are absent
+ in the browser bundle).
 - `src/analytics/session-timer.ts` — `createSessionClock` (pure, testable
   active-time accumulator) + `useSessionTimer()` hook. Reports active
   (foreground) in-app time via `heartbeat` (every 20s while visible) and
