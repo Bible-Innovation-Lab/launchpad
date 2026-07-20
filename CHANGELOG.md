@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- `FeedbackModal`: `onSubmitted` / `onSubmit` may be async; returning `false` (or throwing) keeps the form open instead of showing thanks — so apps can gate success on a persistence API.
 - `shareText`: dismissing the native share sheet (`AbortError`) falls through to clipboard instead of returning `cancelled`, so users still get the text on mobile.
 - `PwaInstallPrompt`: accepting the native install no longer fires `pwa_install_dismissed` or permanently dismisses via the same path as "Not now". Closing the native sheet only hides the banner for the current visit.
 - `FeedbackModal`: when both `onSubmitted` and deprecated `onSubmit` are passed, only `onSubmitted` runs.

@@ -52,12 +52,17 @@ export interface FeedbackModalProps {
   /** Extra properties merged into the analytics event (e.g. `{ surface: "post-game" }`). */
   extraProps?: Record<string, JSONValue>;
   /**
-   * Optional callback after the event is fired (e.g. show a toast, earn a hub badge).
+   * Optional hook after the analytics event is fired (e.g. persist feedback, earn a badge).
+   * May be async. Return `false` (or throw) to keep the form open instead of showing thanks.
    * Preferred name; `onSubmit` is kept as an alias.
    */
-  onSubmitted?: (result: { rating: number; feedback: string }) => void;
+  onSubmitted?: (
+    result: { rating: number; feedback: string },
+  ) => void | boolean | Promise<void | boolean>;
   /** @deprecated Prefer `onSubmitted`. */
-  onSubmit?: (result: { rating: number; feedback: string }) => void;
+  onSubmit?: (
+    result: { rating: number; feedback: string },
+  ) => void | boolean | Promise<void | boolean>;
 }
 
 export function FeedbackModal({
@@ -75,6 +80,7 @@ export function FeedbackModal({
   const [hover, setHover] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [pending, setPending] = useState(false);
 
   // Reset on every (re)open so a previous session's draft doesn't leak in.
   useEffect(() => {
@@ -83,6 +89,7 @@ export function FeedbackModal({
       setHover(0);
       setFeedback("");
       setSubmitted(false);
+      setPending(false);
     }
   }, [open]);
 
@@ -96,21 +103,40 @@ export function FeedbackModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const handleSubmit = useCallback(() => {
-    if (rating < 1) return; // require at least 1 star to send the event
+  const handleSubmit = useCallback(async () => {
+    if (rating < 1 || pending) return; // require at least 1 star to send the event
     const trimmed = feedback.trim();
-    track(eventName, {
-      rating,
-      feedback: trimmed || null,
-      ...(extraProps ?? {}),
-    });
     const payload = { rating, feedback: trimmed };
-    onSubmitted?.(payload);
-    onSubmit?.(payload);
-    setSubmitted(true);
-    // Brief "thanks" frame, then dismiss. 900ms ≈ enough to register without feeling sticky.
-    window.setTimeout(onClose, 900);
-  }, [rating, feedback, eventName, extraProps, onSubmitted, onSubmit, onClose]);
+    setPending(true);
+    try {
+      track(eventName, {
+        rating,
+        feedback: trimmed || null,
+        ...(extraProps ?? {}),
+      });
+      // Prefer onSubmitted; only call onSubmit when the new prop is absent.
+      const gate = onSubmitted
+        ? await onSubmitted(payload)
+        : await onSubmit?.(payload);
+      if (gate === false) return;
+      setSubmitted(true);
+      // Brief "thanks" frame, then dismiss. 900ms ≈ enough to register without feeling sticky.
+      window.setTimeout(onClose, 900);
+    } catch {
+      // Consumer rejected persistence — stay on the form.
+    } finally {
+      setPending(false);
+    }
+  }, [
+    rating,
+    feedback,
+    pending,
+    eventName,
+    extraProps,
+    onSubmitted,
+    onSubmit,
+    onClose,
+  ]);
 
   if (!open) return null;
 
@@ -176,15 +202,15 @@ export function FeedbackModal({
 
             <button
               type="button"
-              onClick={handleSubmit}
-              disabled={rating < 1}
+              onClick={() => void handleSubmit()}
+              disabled={rating < 1 || pending}
               style={{
                 ...submitStyle,
-                opacity: rating < 1 ? 0.5 : 1,
-                cursor: rating < 1 ? "not-allowed" : "pointer",
+                opacity: rating < 1 || pending ? 0.5 : 1,
+                cursor: rating < 1 || pending ? "not-allowed" : "pointer",
               }}
             >
-              {submitLabel}
+              {pending ? "Sending…" : submitLabel}
             </button>
           </>
         )}
