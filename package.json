@@ -23,6 +23,7 @@
     "./shell/native-chrome-init": "./src/shell/native-chrome-init.tsx",
     "./shell/hub": "./src/shell/hub.tsx",
     "./shell/hub-kind": "./src/shell/hub-kind.ts",
+    "./shell/capacitor-optional-stub": "./src/shell/capacitor-optional-stub.js",
     "./theme": "./src/theme/index.ts",
     "./ui": "./src/ui/index.ts",
     "./pwa": "./src/pwa/index.ts"

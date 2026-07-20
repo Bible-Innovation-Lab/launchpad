@@ -31,8 +31,7 @@
  */
 
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import type { NextConfig } from "next";
 
 type AsyncOrSync<T> = T | Promise<T>;
@@ -51,6 +50,9 @@ const OPTIONAL_CAPACITOR_PEERS = [
 	"@capacitor/status-bar",
 ] as const;
 
+/** Package subpath — avoid absolute Windows paths (Turbopack rejects them). */
+const CAPACITOR_OPTIONAL_STUB = "@bil/launchpad/shell/capacitor-optional-stub";
+
 const BIL_SECURITY_HEADERS = [
 	{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
 	{ key: "X-Frame-Options", value: "DENY" },
@@ -58,19 +60,15 @@ const BIL_SECURITY_HEADERS = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 ];
 
-/** Map uninstalled optional Capacitor peers → no-op stub (absolute path). */
+/** Map uninstalled optional Capacitor peers → no-op stub subpath. */
 function missingCapacitorAliases(): Record<string, string> {
 	const consumerRequire = createRequire(join(process.cwd(), "package.json"));
-	const stub = join(
-		dirname(fileURLToPath(import.meta.url)),
-		"../shell/capacitor-optional-stub.js",
-	);
 	const aliases: Record<string, string> = {};
 	for (const pkg of OPTIONAL_CAPACITOR_PEERS) {
 		try {
 			consumerRequire.resolve(pkg);
 		} catch {
-			aliases[pkg] = stub;
+			aliases[pkg] = CAPACITOR_OPTIONAL_STUB;
 		}
 	}
 	return aliases;
