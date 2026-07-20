@@ -1,9 +1,31 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { CompactHeader } from "./compact-header";
 import { PlayLayoutHeader } from "./play-layout-header";
 import { ViewportFitShell } from "./viewport-fit-shell";
+
+/** Tailwind `lg` breakpoint — keep in sync with `lg:` utilities in consumers. */
+const LG_QUERY = "(min-width: 1024px)";
+
+function subscribeLg(onStoreChange: () => void) {
+	const mq = window.matchMedia(LG_QUERY);
+	mq.addEventListener("change", onStoreChange);
+	return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getLgSnapshot() {
+	return window.matchMedia(LG_QUERY).matches;
+}
+
+/** SSR / first paint: assume mobile so phones don't flash the desktop shell. */
+function getLgServerSnapshot() {
+	return false;
+}
+
+function useIsDesktopLg() {
+	return useSyncExternalStore(subscribeLg, getLgSnapshot, getLgServerSnapshot);
+}
 
 export type ResponsivePlayLayoutProps = {
 	title: string;
@@ -21,6 +43,8 @@ export type ResponsivePlayLayoutProps = {
 /**
  * Mobile (max-lg): ViewportFitShell — game fits in 100dvh, no page scroll.
  * Desktop (lg+): wider shell with optional sidebar; scroll permitted.
+ *
+ * Only one tree mounts at a time (matchMedia), so child effects/state are not duplicated.
  */
 export function ResponsivePlayLayout({
 	title,
@@ -33,26 +57,11 @@ export function ResponsivePlayLayout({
 	mainClassName = "items-center justify-center gap-4",
 	desktopMainClassName = "items-center justify-center gap-6",
 }: ResponsivePlayLayoutProps) {
-	return (
-		<>
-			<div className="lg:hidden">
-				<ViewportFitShell
-					header={
-						<CompactHeader
-							title={title}
-							subtitle={subtitle}
-							actions={headerActions}
-							trailing={trailing}
-							showHubLink={showHubLink}
-						/>
-					}
-					mainClassName={mainClassName}
-				>
-					{children}
-				</ViewportFitShell>
-			</div>
+	const isDesktop = useIsDesktopLg();
 
-			<div className="hidden min-h-dvh bg-[var(--background)] text-[var(--foreground)] lg:flex lg:flex-col">
+	if (isDesktop) {
+		return (
+			<div className="flex min-h-dvh flex-col bg-[var(--background)] text-[var(--foreground)]">
 				<PlayLayoutHeader
 					title={title}
 					actions={headerActions}
@@ -77,6 +86,23 @@ export function ResponsivePlayLayout({
 					) : null}
 				</div>
 			</div>
-		</>
+		);
+	}
+
+	return (
+		<ViewportFitShell
+			header={
+				<CompactHeader
+					title={title}
+					subtitle={subtitle}
+					actions={headerActions}
+					trailing={trailing}
+					showHubLink={showHubLink}
+				/>
+			}
+			mainClassName={mainClassName}
+		>
+			{children}
+		</ViewportFitShell>
 	);
 }

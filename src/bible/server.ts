@@ -49,27 +49,14 @@ export interface YouVersionClientOptions {
 }
 
 export type BuildBibleComUrlOptions = {
-  /** bible.com version id. Defaults to `DEFAULT_BIBLE_ID` (111). */
+  /**
+   * bible.com version id. Defaults to `resolveBibleId()` —
+   * `YOUVERSION_BIBLE_ID` when set, otherwise `DEFAULT_BIBLE_ID` (111).
+   */
   versionId?: number;
   /** Optional abbreviation suffix, e.g. `"NIV"` → `…/JHN.3.16.NIV`. */
   abbreviation?: string;
 };
-
-/**
- * Build a bible.com deep link for a USFM passage id.
- * Canonical form: `https://www.bible.com/bible/{versionId}/{usfm}`.
- */
-export function buildBibleComUrl(
-  usfmId: string,
-  opts?: BuildBibleComUrlOptions,
-): string {
-  const versionId = opts?.versionId ?? DEFAULT_BIBLE_ID;
-  const base = `https://www.bible.com/bible/${versionId}/${usfmId.trim()}`;
-  if (opts?.abbreviation) {
-    return `${base}.${opts.abbreviation}`;
-  }
-  return base;
-}
 
 function resolveBibleId(explicit?: number): number {
   if (typeof explicit === "number" && Number.isFinite(explicit)) {
@@ -81,6 +68,24 @@ function resolveBibleId(explicit?: number): number {
     if (Number.isFinite(n) && n > 0) return n;
   }
   return DEFAULT_BIBLE_ID;
+}
+
+/**
+ * Build a bible.com deep link for a USFM passage id.
+ * Canonical form: `https://www.bible.com/bible/{versionId}/{usfm}`.
+ * Default version follows the same resolution as the YouVersion client
+ * (`versionId` arg → `YOUVERSION_BIBLE_ID` → 111).
+ */
+export function buildBibleComUrl(
+  usfmId: string,
+  opts?: BuildBibleComUrlOptions,
+): string {
+  const versionId = resolveBibleId(opts?.versionId);
+  const base = `https://www.bible.com/bible/${versionId}/${usfmId.trim()}`;
+  if (opts?.abbreviation) {
+    return `${base}.${opts.abbreviation}`;
+  }
+  return base;
 }
 
 export interface YouVersionClient {

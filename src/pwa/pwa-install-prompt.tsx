@@ -76,9 +76,16 @@ function platformForMode(mode: PromptMode): string {
 	}
 }
 
-function readVisitCount(): number {
+/** Guards against Strict Mode double-init / remount within one page load. */
+let visitCountedThisLoad = false;
+
+/** Increment once per page load (safe under React Strict Mode). */
+function bumpVisitCountOnce(): number {
 	if (typeof window === "undefined") return 0;
-	const visits = Number(sessionStorage.getItem(VISIT_COUNT_KEY) ?? "0") + 1;
+	const current = Number(sessionStorage.getItem(VISIT_COUNT_KEY) ?? "0");
+	if (visitCountedThisLoad) return current;
+	visitCountedThisLoad = true;
+	const visits = current + 1;
 	sessionStorage.setItem(VISIT_COUNT_KEY, String(visits));
 	return visits;
 }
@@ -126,25 +133,22 @@ function subscribeInShell(onStoreChange: () => void) {
 }
 
 function useDeferredInstallPrompt(active: boolean) {
-	const eventRef = useRef<BeforeInstallPromptEvent | null>(null);
+	const [promptEvent, setPromptEvent] =
+		useState<BeforeInstallPromptEvent | null>(null);
 
-	return useSyncExternalStore(
-		(onStoreChange) => {
-			if (!active || typeof window === "undefined") return () => {};
-			const handler = (event: Event) => {
-				event.preventDefault();
-				eventRef.current = event as BeforeInstallPromptEvent;
-				onStoreChange();
-			};
-			window.addEventListener("beforeinstallprompt", handler);
-			return () => {
-				window.removeEventListener("beforeinstallprompt", handler);
-				eventRef.current = null;
-			};
-		},
-		() => eventRef.current,
-		() => null,
-	);
+	// Subscribe once on mount. A fresh subscribe fn each render (useSyncExternalStore)
+	// would resubscribe, clear the ref, and lose the captured event.
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const handler = (event: Event) => {
+			event.preventDefault();
+			setPromptEvent(event as BeforeInstallPromptEvent);
+		};
+		window.addEventListener("beforeinstallprompt", handler);
+		return () => window.removeEventListener("beforeinstallprompt", handler);
+	}, []);
+
+	return active ? promptEvent : null;
 }
 
 function useAndroidMenuFallback(active: boolean) {
@@ -169,11 +173,15 @@ export function PwaInstallPrompt({
 }: PwaInstallPromptProps) {
 	const isClient = useSyncExternalStore(subscribeNoop, () => true, () => false);
 	const inShell = useSyncExternalStore(subscribeInShell, isInShellNow, () => false);
-	const [visitCount] = useState(readVisitCount);
+	const [visitCount, setVisitCount] = useState(0);
 	const [wasDismissed, setWasDismissed] = useState(() =>
 		readWasDismissed(shortName),
 	);
 	const trackedMode = useRef<PromptMode | null>(null);
+
+	useEffect(() => {
+		setVisitCount(bumpVisitCountOnce());
+	}, []);
 
 	const promptEligible = isClient && !wasDismissed && !inShell;
 
@@ -200,13 +208,18 @@ export function PwaInstallPrompt({
 		});
 	}, [mode]);
 
+	const hidePermanently = useCallback(() => {
+		localStorage.setItem(dismissKey(shortName), "1");
+		setWasDismissed(true);
+	}, [shortName]);
+
+	/** "Not now" — remember dismissal across visits. */
 	const dismiss = useCallback(() => {
 		if (mode) {
 			track("pwa_install_dismissed", { platform: platformForMode(mode) });
 		}
-		localStorage.setItem(dismissKey(shortName), "1");
-		setWasDismissed(true);
-	}, [mode, shortName]);
+		hidePermanently();
+	}, [mode, hidePermanently]);
 
 	const install = useCallback(async () => {
 		if (!deferredPrompt) return;
@@ -214,9 +227,14 @@ export function PwaInstallPrompt({
 		const { outcome } = await deferredPrompt.userChoice;
 		if (outcome === "accepted") {
 			track("pwa_install_accepted", { platform: "android" });
+			// Installed: hide without firing `pwa_install_dismissed`.
+			hidePermanently();
+			return;
 		}
-		dismiss();
-	}, [deferredPrompt, dismiss]);
+		// User closed the native sheet — hide for this visit only so the
+		// banner can return on a later session.
+		setWasDismissed(true);
+	}, [deferredPrompt, hidePermanently]);
 
 	if (!mode) return null;
 

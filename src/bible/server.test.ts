@@ -203,6 +203,14 @@ console.log("\nbuildBibleComUrl —");
     buildBibleComUrl("JHN.6.9", { versionId: 59 }) ===
       "https://www.bible.com/bible/59/JHN.6.9",
   );
+  const prevEnv = process.env.YOUVERSION_BIBLE_ID;
+  process.env.YOUVERSION_BIBLE_ID = "59";
+  check(
+    "env YOUVERSION_BIBLE_ID used when versionId omitted",
+    buildBibleComUrl("JHN.3.16") === "https://www.bible.com/bible/59/JHN.3.16",
+  );
+  if (prevEnv === undefined) delete process.env.YOUVERSION_BIBLE_ID;
+  else process.env.YOUVERSION_BIBLE_ID = prevEnv;
 }
 
 console.log("\nbibleId override —");
