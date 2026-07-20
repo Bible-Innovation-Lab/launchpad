@@ -51,7 +51,12 @@ export interface FeedbackModalProps {
   eventName?: string;
   /** Extra properties merged into the analytics event (e.g. `{ surface: "post-game" }`). */
   extraProps?: Record<string, JSONValue>;
-  /** Optional callback after the event is fired (e.g. show a toast). */
+  /**
+   * Optional callback after the event is fired (e.g. show a toast, earn a hub badge).
+   * Preferred name; `onSubmit` is kept as an alias.
+   */
+  onSubmitted?: (result: { rating: number; feedback: string }) => void;
+  /** @deprecated Prefer `onSubmitted`. */
   onSubmit?: (result: { rating: number; feedback: string }) => void;
 }
 
@@ -63,6 +68,7 @@ export function FeedbackModal({
   submitLabel = "Submit",
   eventName = "feedback_submitted",
   extraProps,
+  onSubmitted,
   onSubmit,
 }: FeedbackModalProps) {
   const [rating, setRating] = useState(0);
@@ -98,11 +104,13 @@ export function FeedbackModal({
       feedback: trimmed || null,
       ...(extraProps ?? {}),
     });
-    onSubmit?.({ rating, feedback: trimmed });
+    const payload = { rating, feedback: trimmed };
+    onSubmitted?.(payload);
+    onSubmit?.(payload);
     setSubmitted(true);
     // Brief "thanks" frame, then dismiss. 900ms ≈ enough to register without feeling sticky.
     window.setTimeout(onClose, 900);
-  }, [rating, feedback, eventName, extraProps, onSubmit, onClose]);
+  }, [rating, feedback, eventName, extraProps, onSubmitted, onSubmit, onClose]);
 
   if (!open) return null;
 

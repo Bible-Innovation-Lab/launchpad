@@ -2,30 +2,29 @@
  * YouVersion Platform API wrapper.
  *
  * Server-only. Holds YOUVERSION_API_KEY, calls
- * https://api.youversion.com/v1/bibles/111/passages/{usfm} (NIV 2011, locked).
+ * https://api.youversion.com/v1/bibles/{bibleId}/passages/{usfm}.
  * Auth via `X-YVP-App-Key` header.
+ *
+ * Default bible_id is 111 (NIV 2011). Override via `createYouVersionClient({ bibleId })`,
+ * top-level helper options, or env `YOUVERSION_BIBLE_ID`.
  *
  * Two ways to use it:
  *   1) Top-level functions (read API key from process.env at first call):
- *        import { getVerse } from "@/lib/bible/youversion";
+ *        import { getVerse } from "@bil/launchpad/bible";
  *        const p = await getVerse("John 3:16");
  *
  *   2) Factory (inject fetch + key for tests / multi-key scenarios):
- *        const yv = createYouVersionClient({ apiKey, fetch });
+ *        const yv = createYouVersionClient({ apiKey, bibleId: 59, fetch });
  *        const p = await yv.getVerse("John 3:16");
  *
- * Returns Passage objects: { id, reference, content }. Different shape from
- * the current `lib/bible/index.ts` Verse type — YouVersion returns one
- * concatenated text block per call, not per-verse arrays. Callers that
- * need per-verse decomposition can loop getVerse.
+ * Returns Passage objects: { id, reference, content }.
  *
- * v0.1.0 surface: getVerse, getRange, getDailyVerse. No getBook (YouVersion
- * returns empty for whole-book USFM requests). No getRandomVerse / searchText.
+ * Also exports `buildBibleComUrl` for bible.com deep links.
  */
 
 const YV_BASE = "https://api.youversion.com/v1";
-const BIBLE_ID = 111; // NIV 2011, locked. Change here if the platform team
-                      // approves another translation.
+/** NIV 2011 — platform default when no override is set. */
+export const DEFAULT_BIBLE_ID = 111;
 
 export interface Passage {
   /** USFM passage id, e.g. "JHN.3.16" or "JHN.3.16-21" */
@@ -38,10 +37,50 @@ export interface Passage {
 
 export interface YouVersionClientOptions {
   apiKey: string;
+  /**
+   * YouVersion bible id. Defaults to `DEFAULT_BIBLE_ID` (111 / NIV 2011).
+   * Example: `59` for ESV.
+   */
+  bibleId?: number;
   /** Optional fetch override for tests. Defaults to globalThis.fetch. */
   fetch?: typeof fetch;
   /** Optional base URL override. Defaults to the production endpoint. */
   baseUrl?: string;
+}
+
+export type BuildBibleComUrlOptions = {
+  /** bible.com version id. Defaults to `DEFAULT_BIBLE_ID` (111). */
+  versionId?: number;
+  /** Optional abbreviation suffix, e.g. `"NIV"` → `…/JHN.3.16.NIV`. */
+  abbreviation?: string;
+};
+
+/**
+ * Build a bible.com deep link for a USFM passage id.
+ * Canonical form: `https://www.bible.com/bible/{versionId}/{usfm}`.
+ */
+export function buildBibleComUrl(
+  usfmId: string,
+  opts?: BuildBibleComUrlOptions,
+): string {
+  const versionId = opts?.versionId ?? DEFAULT_BIBLE_ID;
+  const base = `https://www.bible.com/bible/${versionId}/${usfmId.trim()}`;
+  if (opts?.abbreviation) {
+    return `${base}.${opts.abbreviation}`;
+  }
+  return base;
+}
+
+function resolveBibleId(explicit?: number): number {
+  if (typeof explicit === "number" && Number.isFinite(explicit)) {
+    return explicit;
+  }
+  const fromEnv = process.env.YOUVERSION_BIBLE_ID?.trim();
+  if (fromEnv) {
+    const n = Number(fromEnv);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return DEFAULT_BIBLE_ID;
 }
 
 export interface YouVersionClient {
@@ -165,11 +204,12 @@ export function createYouVersionClient(opts: YouVersionClientOptions): YouVersio
   if (!apiKey) {
     throw new Error("createYouVersionClient: apiKey is required");
   }
+  const bibleId = resolveBibleId(opts.bibleId);
   const doFetch = opts.fetch ?? globalThis.fetch;
   const baseUrl = opts.baseUrl ?? YV_BASE;
 
   async function fetchPassage(usfm: string): Promise<Passage> {
-    const url = `${baseUrl}/bibles/${BIBLE_ID}/passages/${encodeURIComponent(usfm)}?format=text`;
+    const url = `${baseUrl}/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}?format=text`;
     const res = await doFetch(url, { headers: { "X-YVP-App-Key": apiKey } });
     if (!res.ok) {
       throw new YouVersionError(res.status, `YouVersion ${res.status} for ${usfm}`);
@@ -224,9 +264,9 @@ function dayOfYearUTC(date: Date): number {
 // use createYouVersionClient(...) for tests / DI.
 
 let _singleton: YouVersionClient | null = null;
+let _singletonKey: string | null = null;
 
-function getDefaultClient(): YouVersionClient {
-  if (_singleton) return _singleton;
+function getDefaultClient(bibleId?: number): YouVersionClient {
   const apiKey = process.env.YOUVERSION_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -234,16 +274,24 @@ function getDefaultClient(): YouVersionClient {
       "It should be injected by bil-provisioning at /provision time."
     );
   }
-  _singleton = createYouVersionClient({ apiKey });
+  const resolved = resolveBibleId(bibleId);
+  // Explicit per-call override — do not clobber the default singleton.
+  if (bibleId !== undefined) {
+    return createYouVersionClient({ apiKey, bibleId: resolved });
+  }
+  const key = String(resolved);
+  if (_singleton && _singletonKey === key) return _singleton;
+  _singleton = createYouVersionClient({ apiKey, bibleId: resolved });
+  _singletonKey = key;
   return _singleton;
 }
 
-export async function getVerse(ref: string): Promise<Passage> {
-  return getDefaultClient().getVerse(ref);
+export async function getVerse(ref: string, opts?: { bibleId?: number }): Promise<Passage> {
+  return getDefaultClient(opts?.bibleId).getVerse(ref);
 }
-export async function getRange(ref: string): Promise<Passage> {
-  return getDefaultClient().getRange(ref);
+export async function getRange(ref: string, opts?: { bibleId?: number }): Promise<Passage> {
+  return getDefaultClient(opts?.bibleId).getRange(ref);
 }
-export async function getDailyVerse(date: Date): Promise<Passage> {
-  return getDefaultClient().getDailyVerse(date);
+export async function getDailyVerse(date: Date, opts?: { bibleId?: number }): Promise<Passage> {
+  return getDefaultClient(opts?.bibleId).getDailyVerse(date);
 }

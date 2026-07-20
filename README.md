@@ -1,10 +1,10 @@
 # @bil/launchpad
 
-The BIL platform shipped as a single npm package. Three things, intentionally
-narrow: a security proxy (anon-cookie mint + bot filter), a YouVersion-backed
-Bible reader, and auto-page-view analytics — the code that's the same across
-every student product in the BIL summer program. Apps own everything else
-(share cards, share text, OG images, auth, push, etc.).
+The BIL platform shipped as a single npm package. Core: a security proxy,
+a YouVersion-backed Bible reader, and auto-page-view analytics — plus shared
+shell/UI helpers (hub link, play layout, theme, PWA install, text share)
+that every student product was copy-pasting. Apps still own product-specific
+share copy, OG images, auth, and web push subscribe/send.
 
 **This repo is the package source, not a student template.** Students
 fork [`Bible-Innovation-Lab/bil-app-template`](https://github.com/Bible-Innovation-Lab/bil-app-template)
@@ -20,15 +20,22 @@ Internal program. Not open source.
 | Sub-path | What it is |
 |---|---|
 | `@bil/launchpad/proxy` | Next 16 proxy (formerly middleware): legacy-cookie cleanup. Identity minting now lives in the analytics route. Exports `proxy` function + `config` matcher. |
-| `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only (holds `YOUVERSION_API_KEY`). Exports `getVerse`, `getRange`, `getDailyVerse`. Returns `Passage = { id, reference, content }` against NIV 2011 (bible_id `111`). |
+| `@bil/launchpad/bible` | YouVersion Platform API wrapper. Server-side only. Exports `getVerse`, `getRange`, `getDailyVerse`, `refToUsfm`, `buildBibleComUrl`. Default bible_id `111` (NIV); override with `bibleId` / `YOUVERSION_BIBLE_ID`. |
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`, carrying a device-fingerprint hash for identity recovery. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. Also runs the session timer: reports active in-app time via `heartbeat` (every 20s while visible) and `$pageleave` (on tab hide/pagehide), both carrying `elapsed_ms`. |
 | `@bil/launchpad/analytics/vercel-analytics` | `<VercelAnalytics />` — Vercel Web Analytics (`@vercel/analytics`). Redundant PostHog backup; render once in `app/layout.tsx`. Requires Web Analytics enabled on the Vercel project. |
-| `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star "How would you rate this game?" picker, an "Any feedback?" textarea, and an X close button. Submitting fires a `feedback_submitted` PostHog event through the existing `/api/analytics` beacon. |
-| `@bil/launchpad/realtime` | Multiplayer toolkit (server). `realtimeStore` / `createRealtimeStore` — an Upstash-Redis-backed KV store (with a dev in-memory fallback) for cross-invocation room/game state, namespaced by `APP_ID`. `createSSEStream` — a Server-Sent Events helper that polls the store and pushes state changes to connected players. Credentials (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) are injected by bil-provisioning, so multiplayer works in production with zero config. |
-| `@bil/launchpad/realtime/client` | Multiplayer toolkit (client). `useRealtimeChannel(url)` — a React hook that subscribes to a `createSSEStream` endpoint with `EventSource` and re-renders with the latest state. Separate entry point so the server store's `@upstash/redis` never lands in a client bundle. |
-| `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. Students re-export from `app/api/analytics/route.ts`. Uses the `_lp_aid` cookie as identity when present; otherwise derives a deterministic anon-id from client IP + device fingerprint and sets the cookie. Forwards `$useragent` + `$ip` to PostHog (which auto-derives `$browser` + `$geoip_*`), emits `first_visit` when an id is freshly minted. Direct HTTP POST to PostHog's `/capture/` — no SDK. |
-| `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — config wrapper that adds `transpilePackages`, BIL security headers, and build-time env-var assertion. |
+| `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star picker and textarea. Submitting fires `feedback_submitted` via `/api/analytics`. Optional `onSubmitted` for app side-effects (e.g. hub badges). |
+| `@bil/launchpad/share` | `shareText({ text, title?, url? })` — `navigator.share` → clipboard; fires `share_clicked`. |
+| `@bil/launchpad/realtime` | Multiplayer toolkit (server). `realtimeStore` / `createRealtimeStore` + `createSSEStream`. |
+| `@bil/launchpad/realtime/client` | `useRealtimeChannel(url)` React hook. |
+| `@bil/launchpad/routes/analytics` | Pre-made `POST /api/analytics` handler. |
+| `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — transpilePackages, security headers, env assertion. |
+| `@bil/launchpad/shell` | Shell detection, hub URLs, `navigateToHub`, native chrome helpers. |
+| `@bil/launchpad/shell/native-chrome-init` | `<NativeChromeInit />`. |
+| `@bil/launchpad/shell/hub` | `HubProvider`, `HubLink`, `HUBS`, `getHubLink`. |
+| `@bil/launchpad/theme` | `ThemeProvider` + `ThemeToggle` (peer: `next-themes`). |
+| `@bil/launchpad/ui` | Play layout: `ViewportFitShell`, `CompactHeader`, `ResponsivePlayLayout`, `CollapsibleSection`. |
+| `@bil/launchpad/pwa` | `PwaInstallPrompt`, `ServiceWorkerRegistration`, `createWebManifest`. Apps keep `public/sw.js` + icons. |
 
 ## How a student consumes this
 
@@ -67,6 +74,7 @@ These must be set on each student's Vercel project. The bil-provisioning service
 | `POSTHOG_KEY` | yes | shared BIL PostHog project key |
 | `POSTHOG_HOST` | optional (default `https://us.i.posthog.com`) | |
 | `YOUVERSION_API_KEY` | yes | shared key, header is `X-YVP-App-Key` |
+| `YOUVERSION_BIBLE_ID` | optional (default `111` / NIV) | YouVersion bible id for the default client |
 | `UPSTASH_REDIS_REST_URL` | optional (only needed for multiplayer) | shared Upstash Redis REST URL; bil-provisioning injects it when configured. `KV_REST_API_URL` is accepted as a fallback. |
 | `UPSTASH_REDIS_REST_TOKEN` | optional (only needed for multiplayer) | matching token; `KV_REST_API_TOKEN` accepted as a fallback. |
 

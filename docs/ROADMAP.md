@@ -13,25 +13,12 @@ platform small.
 
 ## Share helpers
 
-**What it was.** `@bil/launchpad/share` with a `shareResult(text, dataUrl?)`
-helper — the cascading `navigator.share` → `canShare({files})` → clipboard
-fallback. Also a `@vercel/og`-based card renderer and a Wordle-grid canvas.
+**Status (0.1.3).** Text-only `shareText()` lives at `@bil/launchpad/share`
+(`navigator.share` → clipboard + built-in `share_clicked` analytics). Message /
+emoji / OG / image generation stay in apps.
 
-**Why removed.** Different products have different share shapes (grids,
-verses, scores, photos, plain text). The Wordle-grid stuff was Bible Trivia
-hiding in the platform; the `shareResult` cascade is genuinely shared but
-no other apps exist yet to confirm the right shape.
-
-**Re-add signal.** When 3+ apps have a `lib/share/` directory and they all
-have the same `navigator.share → clipboard` cascade copy-pasted, extract
-`shareResult` into the package. Keep the image + text generation in apps —
-that part really does vary.
-
-**Hidden complexity to plan for.** iOS Safari's `canShare({files})` lies
-when the file is a data URL blob > a few MB; Android Chrome's share sheet
-sometimes hangs and never resolves the promise. The cascade has to time
-out the share attempt before falling back. The current version doesn't
-handle the timeout case.
+**Still out.** File/image share cascade and hung-sheet timeout. Revisit when
+3+ apps need `canShare({ files })` with a shared timeout policy.
 
 ---
 
@@ -64,26 +51,18 @@ The provisioning service would have to handle that or we accept Google-only.
 
 ## Web Push notifications
 
-**What it was.** `src/modules/push/` — copy-paste VAPID + service worker
-+ send endpoint scaffold. Default OFF.
+**Status (0.1.3).** PWA *install* is in the package (`@bil/launchpad/pwa`:
+`PwaInstallPrompt`, `ServiceWorkerRegistration`, `createWebManifest`). Each
+app still ships its own `public/sw.js` (service workers cannot load from
+`node_modules`).
 
-**Why removed.** Same reason as auth: no app needs it yet, and the
-copy-paste shape didn't justify living in the package.
-
-**Re-add signal.** First time a BIL app shows organic D2 retention pull
-without a notification nudge. Push amplifies an existing loop; it does
-not create one. Adding it to apps that don't already have organic pull
-just trains users to swipe away notifications.
-
-**What to put back.** A `@bil/push` package (or recipe) that wires up
-VAPID + a `pushSubscribe()` client helper + a `sendPush()` server helper.
-The service worker file has to live in each app's `public/` though —
-service workers can't be loaded from `node_modules`.
+**Still out.** VAPID subscribe/send, notification soft-ask, DailyReminders,
+FCM — prefer a separate `@bil/push` package or template recipe when organic
+D2 retention exists without a nudge.
 
 **Hidden complexity to plan for.** Safari requires a PWA install (Add to
 Home Screen) before it will accept push permission — different UX from
-Chrome/Android. iOS push only works on iOS 16.4+. The product needs an
-"install this app" upsell flow that's currently nobody's responsibility.
+Chrome/Android. iOS push only works on iOS 16.4+.
 
 ---
 

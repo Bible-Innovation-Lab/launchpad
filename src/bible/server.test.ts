@@ -9,6 +9,8 @@
 import {
   createYouVersionClient,
   refToUsfm,
+  buildBibleComUrl,
+  DEFAULT_BIBLE_ID,
   BibleRefError,
   YouVersionError,
 } from "./server";
@@ -182,6 +184,46 @@ console.log("\nconfiguration —");
   let threw = false;
   try { createYouVersionClient({ apiKey: "" }); } catch { threw = true; }
   check("empty apiKey throws at factory", threw);
+}
+
+console.log("\nbuildBibleComUrl —");
+{
+  check(
+    "default NIV url",
+    buildBibleComUrl("JHN.3.16") ===
+      `https://www.bible.com/bible/${DEFAULT_BIBLE_ID}/JHN.3.16`,
+  );
+  check(
+    "abbreviation suffix",
+    buildBibleComUrl("JHN.3.16", { abbreviation: "NIV" }) ===
+      "https://www.bible.com/bible/111/JHN.3.16.NIV",
+  );
+  check(
+    "alternate versionId",
+    buildBibleComUrl("JHN.6.9", { versionId: 59 }) ===
+      "https://www.bible.com/bible/59/JHN.6.9",
+  );
+}
+
+console.log("\nbibleId override —");
+{
+  const stub = stubFetch([
+    {
+      status: 200,
+      body: { id: "JHN.3.16", reference: "John 3:16", content: "For God…" },
+    },
+  ]);
+  const yv = createYouVersionClient({
+    apiKey: "test",
+    bibleId: 59,
+    fetch: stub.fn,
+  });
+  await yv.getVerse("John 3:16");
+  check(
+    "fetch uses overridden bible id",
+    stub.calls[0].url.includes("/bibles/59/passages/") === true,
+    stub.calls[0].url,
+  );
 }
 
 // ---------------------------------------------------------------------------
