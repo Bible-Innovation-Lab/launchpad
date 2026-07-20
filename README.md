@@ -24,7 +24,7 @@ Internal program. Not open source.
 | `@bil/launchpad/analytics/client` | ~1KB client-side `track(event, props?)` beacon. Same-origin POST to `/api/analytics`, carrying a device-fingerprint hash for identity recovery. |
 | `@bil/launchpad/analytics/page-view-tracker` | `<PageViewTracker />` — drop-in client component. Render once in `app/layout.tsx`; auto-fires `$pageview` on mount + every client-side route change. Also runs the session timer: reports active in-app time via `heartbeat` (every 20s while visible) and `$pageleave` (on tab hide/pagehide), both carrying `elapsed_ms`. |
 | `@bil/launchpad/analytics/vercel-analytics` | `<VercelAnalytics />` — Vercel Web Analytics (`@vercel/analytics`). Redundant PostHog backup; render once in `app/layout.tsx`. Requires Web Analytics enabled on the Vercel project. |
-| `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star picker and textarea. Submitting fires `feedback_submitted` via `/api/analytics`. Optional `onSubmitted` for app side-effects (e.g. hub badges). |
+| `@bil/launchpad/feedback` | `<FeedbackModal />` — controlled pop-up with a 5-star picker and textarea. Submitting fires `feedback_submitted` via `/api/analytics`. Optional async `onSubmitted` for app side-effects (return `false` to keep the form open). |
 | `@bil/launchpad/share` | `shareText({ text, title?, url? })` — `navigator.share` → clipboard; fires `share_clicked`. |
 | `@bil/launchpad/realtime` | Multiplayer toolkit (server). `realtimeStore` / `createRealtimeStore` + `createSSEStream`. |
 | `@bil/launchpad/realtime/client` | `useRealtimeChannel(url)` React hook. |
@@ -32,7 +32,8 @@ Internal program. Not open source.
 | `@bil/launchpad/config/next` | `withLaunchpad(nextConfig)` — transpilePackages, security headers, env assertion. |
 | `@bil/launchpad/shell` | Shell detection, hub URLs, `navigateToHub`, native chrome helpers. |
 | `@bil/launchpad/shell/native-chrome-init` | `<NativeChromeInit />`. |
-| `@bil/launchpad/shell/hub` | `HubProvider`, `HubLink`, `HUBS`, `getHubLink`. |
+| `@bil/launchpad/shell/hub` | Client: `HubProvider`, `HubLink`, `HUBS`, `HubKind`. Pass a pre-resolved `hub` prop into `HubProvider`. |
+| `@bil/launchpad/shell/hub-kind` | Server-safe `resolveHubKind` / `getHubLink` / `HUBS` (no `"use client"`). Call from `app/layout.tsx` so `HUB` env overrides work; do not import this helper into client components for env resolution. |
 | `@bil/launchpad/theme` | `ThemeProvider` + `ThemeToggle` (peer: `next-themes`). |
 | `@bil/launchpad/ui` | Play layout: `ViewportFitShell`, `CompactHeader`, `ResponsivePlayLayout`, `CollapsibleSection`. |
 | `@bil/launchpad/pwa` | `PwaInstallPrompt`, `ServiceWorkerRegistration`, `createWebManifest`. Apps keep `public/sw.js` + icons. |
