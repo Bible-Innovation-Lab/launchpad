@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.3
+
+### Added
+
+- `@bil/launchpad/share` — `shareText()` cascade (`navigator.share` → clipboard) with built-in `share_clicked` analytics. Text-only; message/OG builders stay in apps.
+- `@bil/launchpad/shell/hub` — `HUBS`, `HubKind`, `HubProvider`, `HubLink`, `getHubLink()`.
+- `@bil/launchpad/ui` — `ViewportFitShell`, `CompactHeader` (slot-based `trailing`), `PlayLayoutHeader`, `ResponsivePlayLayout`, `CollapsibleSection`.
+- `@bil/launchpad/theme` — `ThemeProvider` + `ThemeToggle` (peer: `next-themes`).
+- `@bil/launchpad/pwa` — `PwaInstallPrompt`, `ServiceWorkerRegistration`, `createWebManifest`, `pwaIconPaths`. Apps still own `public/sw.js` and icons.
+- `@bil/launchpad/bible` — multi-translation via `bibleId` / `YOUVERSION_BIBLE_ID` (default still `111`); `buildBibleComUrl()`.
+- `FeedbackModal` — `onSubmitted` callback (hub badge side-effects); `onSubmit` kept as alias.
+
 ## 0.1.2
 
 ### Fixed

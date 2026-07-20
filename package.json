@@ -1,7 +1,7 @@
 {
   "name": "@bil/launchpad",
-  "version": "0.1.2",
-  "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), and analytics with auto page-view tracking. Consumed by the bil-app-template student starter.",
+  "version": "0.1.3",
+  "description": "BIL platform code as a single npm package — security proxy, Bible (YouVersion), analytics, shell/UI helpers, PWA install, and share. Consumed by the bil-app-template student starter.",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,12 +14,17 @@
     "./analytics/page-view-tracker": "./src/analytics/page-view-tracker.tsx",
     "./analytics/vercel-analytics": "./src/analytics/vercel-analytics.tsx",
     "./feedback": "./src/feedback/feedback-modal.tsx",
+    "./share": "./src/share/share-text.ts",
     "./routes/analytics": "./src/routes/analytics.ts",
     "./config/next": "./src/config/next.ts",
     "./realtime": "./src/realtime/index.ts",
     "./realtime/client": "./src/realtime/client.ts",
     "./shell": "./src/shell/is-standalone-shell.ts",
-    "./shell/native-chrome-init": "./src/shell/native-chrome-init.tsx"
+    "./shell/native-chrome-init": "./src/shell/native-chrome-init.tsx",
+    "./shell/hub": "./src/shell/hub.tsx",
+    "./theme": "./src/theme/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./pwa": "./src/pwa/index.ts"
   },
   "files": [
     "src/",
@@ -28,7 +33,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/analytics/session-timer.test.ts && bun src/realtime/store.test.ts && bun src/shell/is-standalone-shell.test.ts",
+    "test": "bun src/bible/server.test.ts && bun src/analytics/bot-filter.test.ts && bun src/analytics/client.test.ts && bun src/analytics/session-timer.test.ts && bun src/realtime/store.test.ts && bun src/shell/is-standalone-shell.test.ts && bun src/share/share-text.test.ts",
     "typecheck:web-consumer": "bun scripts/typecheck-web-consumer.ts",
     "smoke": "bun run typecheck && bun run typecheck:web-consumer && bun run test",
     "verify": "bun run smoke"
@@ -39,6 +44,7 @@
   },
   "peerDependencies": {
     "next": ">=16.0.0",
+    "next-themes": ">=0.4.0",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
     "@capacitor/app": ">=7.0.0",
@@ -49,6 +55,9 @@
     "@capacitor/status-bar": ">=7.0.0"
   },
   "peerDependenciesMeta": {
+    "next-themes": {
+      "optional": true
+    },
     "@capacitor/app": {
       "optional": true
     },
@@ -80,6 +89,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "next": "16.2.6",
+    "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "typescript": "^5.9.3"
