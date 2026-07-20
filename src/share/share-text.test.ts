@@ -37,19 +37,6 @@ const originalClipboard = navigator.clipboard;
 const r1 = await shareText({ text: "hello" });
 check("native share returns share", r1 === "share");
 
-// AbortError → cancelled
-(navigator as Navigator & { share: typeof navigator.share }).share = async () => {
-	const err = new Error("user cancelled");
-	err.name = "AbortError";
-	throw err;
-};
-const r2 = await shareText({ text: "hello" });
-check("AbortError returns cancelled", r2 === "cancelled");
-
-// share fails → clipboard
-(navigator as Navigator & { share: typeof navigator.share }).share = async () => {
-	throw new Error("share failed");
-};
 Object.defineProperty(navigator, "clipboard", {
 	configurable: true,
 	value: {
@@ -58,6 +45,20 @@ Object.defineProperty(navigator, "clipboard", {
 		},
 	},
 });
+
+// AbortError (sheet dismiss) → clipboard, matching prior template behavior
+(navigator as Navigator & { share: typeof navigator.share }).share = async () => {
+	const err = new Error("user cancelled");
+	err.name = "AbortError";
+	throw err;
+};
+const r2 = await shareText({ text: "hello" });
+check("AbortError falls through to copy", r2 === "copy");
+
+// share fails → clipboard
+(navigator as Navigator & { share: typeof navigator.share }).share = async () => {
+	throw new Error("share failed");
+};
 const r3 = await shareText({ text: "hello", url: "https://example.com" });
 check("fallback to copy", r3 === "copy");
 

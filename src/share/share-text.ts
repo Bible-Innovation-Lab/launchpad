@@ -34,12 +34,9 @@ export async function shareText(
 			await navigator.share(payload);
 			track(eventName, { result: "share", ...(props ?? {}) });
 			return "share";
-		} catch (err) {
-			if (err instanceof Error && err.name === "AbortError") {
-				track(eventName, { result: "cancelled", ...(props ?? {}) });
-				return "cancelled";
-			}
-			// fall through to clipboard
+		} catch {
+			// User dismiss (AbortError) or share failure — fall through to clipboard
+			// so mobile users still get the text after closing the sheet.
 		}
 	}
 
