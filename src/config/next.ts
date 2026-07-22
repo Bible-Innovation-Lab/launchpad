@@ -23,6 +23,8 @@
  *   - Aliases missing optional `@capacitor/*` peers to a no-op stub so
  *     web-only apps that mount `<NativeChromeInit />` do not get
  *     "Module not found" webpack warnings for push/local-notifications.
+ *     Always sets `turbopack` (at least `{}`) alongside the webpack hook so
+ *     Next.js 16 does not error when Turbopack is the default bundler.
  *
  * Student overrides win: `withLaunchpad(userConfig)` merges userConfig on
  * top, preserving any flags the student set. The only fields we always
@@ -114,15 +116,20 @@ export function withLaunchpad(userConfig: NextConfig = {}): NextConfig {
 		},
 	};
 
-	if (Object.keys(capacitorAliases).length > 0) {
-		merged.turbopack = {
-			...userConfig.turbopack,
-			resolveAlias: {
-				...userConfig.turbopack?.resolveAlias,
-				...capacitorAliases,
-			},
-		};
-	}
+	// Next.js 16 defaults to Turbopack and errors if `webpack` is set without
+	// a `turbopack` key. Always emit turbopack (even `{}`) because we always
+	// attach the webpack hook above for optional Capacitor aliases.
+	merged.turbopack = {
+		...userConfig.turbopack,
+		...(Object.keys(capacitorAliases).length > 0
+			? {
+					resolveAlias: {
+						...userConfig.turbopack?.resolveAlias,
+						...capacitorAliases,
+					},
+				}
+			: {}),
+	};
 
 	return merged;
 }
