@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 /** Paths under `public/` referenced by the web app manifest and layout metadata. */
 export const pwaIconPaths = {
 	svg: "/icon.svg",
+	png: "/icon.png",
 	png192: "/icon-192.png",
 	png512: "/icon-512.png",
 	appleTouch: "/apple-touch-icon.png",
@@ -58,6 +59,12 @@ export function createWebManifest(
 				src: icons.png512,
 				sizes: "512x512",
 				type: "image/png",
+			},
+			{
+				src: icons.png,
+				sizes: "any",
+				type: "image/png",
+				purpose: "any",
 			},
 			{
 				src: icons.svg,
