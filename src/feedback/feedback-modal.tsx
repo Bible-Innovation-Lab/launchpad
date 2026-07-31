@@ -33,8 +33,18 @@
  * reuse the same component.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { track, type JSONValue } from "../analytics/client";
+
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "a[href]",
+  '[tabindex]:not([tabindex="-1"])',
+].join(", ");
 
 export interface FeedbackModalProps {
   /** Whether the modal is currently visible. */
@@ -81,6 +91,7 @@ export function FeedbackModal({
   const [feedback, setFeedback] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [pending, setPending] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Reset on every (re)open so a previous session's draft doesn't leak in.
   useEffect(() => {
@@ -93,11 +104,54 @@ export function FeedbackModal({
     }
   }, [open]);
 
-  // Esc-to-close. Only attached while open so we don't pin a global listener.
+  // The portal renders at the end of <body>, so the dialog also sits at the end
+  // of the tab order. Focus has to be moved in explicitly, or Tab would walk the
+  // whole page underneath the overlay first.
+  useEffect(() => {
+    if (!open) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    return () => {
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [open]);
+
+  // Esc-to-close plus a Tab trap. Only attached while open so we don't pin a
+  // global listener.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const root = dialogRef.current;
+      if (!root) return;
+      const items = Array.from(
+        root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (items.length === 0) {
+        e.preventDefault();
+        root.focus();
+        return;
+      }
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const outside = !root.contains(active);
+
+      if (e.shiftKey) {
+        if (outside || active === first || active === root) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (outside || active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -138,13 +192,17 @@ export function FeedbackModal({
     onClose,
   ]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal to document.body so fixed overlay is not trapped under app chrome
+  // (banners, transformed ancestors) — that was blocking submit clicks.
+  return createPortal(
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Feedback"
+      tabIndex={-1}
       onClick={onClose}
       style={overlayStyle}
     >
@@ -161,7 +219,12 @@ export function FeedbackModal({
         {submitted ? (
           <div style={thanksStyle}>Thanks for your feedback!</div>
         ) : (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSubmit();
+            }}
+          >
             <h2 style={questionStyle}>{question}</h2>
 
             <div role="radiogroup" aria-label="Rating" style={starsRowStyle}>
@@ -201,8 +264,7 @@ export function FeedbackModal({
             </label>
 
             <button
-              type="button"
-              onClick={() => void handleSubmit()}
+              type="submit"
               disabled={rating < 1 || pending}
               style={{
                 ...submitStyle,
@@ -212,10 +274,11 @@ export function FeedbackModal({
             >
               {pending ? "Sending…" : submitLabel}
             </button>
-          </>
+          </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -230,7 +293,9 @@ const overlayStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "center",
-  zIndex: 1000,
+  zIndex: 10000,
+  // Focused programmatically on open; a ring around the whole backdrop is noise.
+  outline: "none",
   padding:
     "max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px))",
 };
