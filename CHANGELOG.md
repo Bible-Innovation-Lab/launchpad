@@ -15,7 +15,7 @@
 
 ### Fixed
 
-- `withLaunchpad`: aliases missing optional `@capacitor/*` peers to `@bil/launchpad/shell/capacitor-optional-stub` (package subpath, not an absolute path — Turbopack rejects Windows absolute imports) so web-only apps mounting `<NativeChromeInit />` no longer warn `Module not found`.
+- `FeedbackModal`: portal to `document.body` with higher z-index so fixed app chrome (banners, transformed ancestors) no longer swallows submit clicks; submit uses a real `<form>` for Enter-to-send.
 - `FeedbackModal`: `onSubmitted` / `onSubmit` may be async; returning `false` (or throwing) keeps the form open instead of showing thanks — so apps can gate success on a persistence API.
 - `shareText`: dismissing the native share sheet (`AbortError`) falls through to clipboard instead of returning `cancelled`, so users still get the text on mobile.
 - `PwaInstallPrompt`: accepting the native install no longer fires `pwa_install_dismissed` or permanently dismisses via the same path as "Not now". Closing the native sheet only hides the banner for the current visit.

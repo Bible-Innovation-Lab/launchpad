@@ -34,6 +34,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { track, type JSONValue } from "../analytics/client";
 
 export interface FeedbackModalProps {
@@ -138,9 +139,11 @@ export function FeedbackModal({
     onClose,
   ]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal to document.body so fixed overlay is not trapped under app chrome
+  // (banners, transformed ancestors) — that was blocking submit clicks.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -161,7 +164,12 @@ export function FeedbackModal({
         {submitted ? (
           <div style={thanksStyle}>Thanks for your feedback!</div>
         ) : (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSubmit();
+            }}
+          >
             <h2 style={questionStyle}>{question}</h2>
 
             <div role="radiogroup" aria-label="Rating" style={starsRowStyle}>
@@ -201,8 +209,7 @@ export function FeedbackModal({
             </label>
 
             <button
-              type="button"
-              onClick={() => void handleSubmit()}
+              type="submit"
               disabled={rating < 1 || pending}
               style={{
                 ...submitStyle,
@@ -212,10 +219,11 @@ export function FeedbackModal({
             >
               {pending ? "Sending…" : submitLabel}
             </button>
-          </>
+          </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -230,7 +238,7 @@ const overlayStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "center",
-  zIndex: 1000,
+  zIndex: 10000,
   padding:
     "max(16px, env(safe-area-inset-top, 16px)) max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px))",
 };
